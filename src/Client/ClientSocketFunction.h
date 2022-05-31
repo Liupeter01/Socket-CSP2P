@@ -20,6 +20,7 @@ public:
           void setSocketAddr(unsigned long _ipaddr, unsigned short _port);                                    //Socket地址设置工具
           bool socketClose();
           bool getSocketConnStatus();                                                                                                //Socket是否建立连接
+          SOCKET getSocket(); 
           int PackageRecv(char* lppackage, int offset, int Length);
           int PackageSend(const char* lppackage, int offset, int Length);
           /*Client Only*/
@@ -29,7 +30,7 @@ public:
           int socketAddrBind();                                                                                                      //Socket地址绑定工具仅限服务器
 private:
           friend MainClient;
-          SOCKET createTCPSocket();                                                                                    //创建TCP socket
+          static SOCKET createTCPSocket();                                                                                    //创建TCP socket
           SOCKADDR_IN&& createAddrDef(unsigned long _ipaddr, unsigned short _port);     //创建地址描述结构
 private:
           SOCKET m_socket = INVALID_SOCKET;

@@ -11,11 +11,7 @@ int main()
                                         while (1) {
                                                   std::cout << "开始进入监听模式，等待客户端的连接........" << std::endl;
                                                   Socket _comClient;
-                                                  _comClient = _server.acceptClientCom(_comClient,_listenServer);        //接受客户端的连接
-                                                  if (_comClient.getSocketConnStatus()) {                                              //连接必须有效
-                                                            _server.clientAddrLogger(_comClient);                        //输出登录信息
-                                                            _server.clientService(_comClient);
-                                                  }
+                                                  _server.acceptClientCom(_listenServer);                     //在监听socket接受客户端的连接
                                         }
                               }
                     }

@@ -7,26 +7,31 @@ void MainServer::cleanArray(T* _array, int size) {
           }
 }
 
-Socket& MainServer::acceptClientCom(Socket& _comClient, const Socket& _listenServer)
+/*ÓÅ»¯·şÎñÆ÷acceptµÄ·½Ê½*/
+void MainServer::acceptClientCom(const Socket& _listenServer)
 {
-          if (_comClient.m_socket == INVALID_SOCKET) {
-                    _comClient.m_socket = _comClient.createTCPSocket();
-          }
-          /*ÔÚ´Ë´¦¼ÓÈëSelectsocket*/
-          FD_SET(_comClient.m_socket, &_fdRead);
-          FD_SET(_comClient.m_socket, &_fdWrite);
-          FD_SET(_comClient.m_socket, &_fdException);
-
+          Socket _comClient;
+          _comClient.m_socket = Socket::createTCPSocket();
+          /*ÔÚ´Ë´¦¼ÓÈëSelect socketÍøÂçÄ£ĞÍ½á¹¹*/
           FD_ZERO(&_fdRead);                        //Çå¿Õfd_set½á¹¹ÖĞµÄÊıÁ¿
           FD_ZERO(&_fdWrite);                       //Çå¿Õfd_set½á¹¹ÖĞµÄÊıÁ¿
           FD_ZERO(&_fdException);                //Çå¿Õfd_set½á¹¹ÖĞµÄÊıÁ¿
-          if (::select(_comClient.m_socket + 1, &_fdRead, &_fdWrite, &_fdException, NULL) < 0) {    //³öÏÖ´íÎó
+
+          FD_SET(_listenServer.m_socket, &_fdRead);
+          FD_SET(_listenServer.m_socket, &_fdWrite);
+          FD_SET(_listenServer.m_socket, &_fdException);
+
+          for (int i = m_connClients.size() - 1; i >= 0; --i) {
+                    FD_SET(m_connClients.at(i).m_socket, &_fdRead);      //¸ù¾İÁ¬½ÓµÄ¿Í»§¶ËÖØĞÂ¸üĞÂfd_setµÄµÄĞÅÏ¢
+          }
+
+          if (::select(_listenServer.m_socket + 1, &_fdRead, &_fdWrite, &_fdException, NULL) < 0) {    //³öÏÖ´íÎó
                     std::cout << "SELECT ¹¤×÷´íÎó!" << std::endl;
           }
           else
           {
-                    if (FD_ISSET(_comClient.m_socket, &_fdRead)) {                //ÊÇ·ñÒÑ¾­ÉèÖÃ¶ÁÈ¡ÃèÊö·û
-                              FD_CLR(_comClient.m_socket, &_fdRead);                 //ÔÚ_fdReadÖĞ½øĞĞÇå³ı
+                    if (FD_ISSET(_listenServer.m_socket, &_fdRead)) {                //ÊÇ·ñÒÑ¾­ÉèÖÃ¶ÁÈ¡ÃèÊö·û
+                              FD_CLR(_listenServer.m_socket ,&_fdRead);                 //ÔÚ_fdReadÖĞ½øĞĞÇå³ı
                               try {
                                         _comClient.m_socketStatus = true;
                                         std::lock_guard<std::mutex>_lck(m_acceptMutex);             //¹¹ÔìÎö¹¹Ëø
@@ -36,16 +41,25 @@ Socket& MainServer::acceptClientCom(Socket& _comClient, const Socket& _listenSer
                                         {
                                                   throw ClientConnectFailed();
                                         }
+                                        clientAddrLogger(_comClient);           //½øĞĞ·şÎñ¶ËÁ¬½ÓµÄ¿Í»§¶ËµÄµØÖ·ÏÔÊ¾
+                                        m_connClients.push_back(_comClient);    //½«¿Í»§¶ËSocketÑ¹ÈëÈİÆ÷
+                                        FD_SET(_comClient.m_socket, &_fdRead);  //Ğ´ÈëSelect
                               }
                               catch (const  ClientConnectFailed&) {
                                         _comClient.m_socketStatus = false;
-#ifdef _DEBUG
+                    #ifdef _DEBUG
                                         std::cout << "[DEBUG INFO] : CLIENT CONNECT ERROR! \n" << WSAGetLastError() << std::endl;
-#endif 
+                    #endif 
+                              }
+                    }
+                    for (size_t i = 0; i < _fdRead.fd_count; ++i) {      //±éÀúfd_set.fd_array[i]
+                              std::vector<Socket>::iterator iter = FindSocket(_fdRead.fd_array[i]);
+                              if (iter!=m_connClients.end() && (*iter).m_socket!= INVALID_SOCKET) {
+                                        clientService(*iter);                   //Ö´ĞĞÓÃ»§Âß¼­
+                                        m_connClients.erase(iter);    //Íê³ÉºóÉ¾³ı
                               }
                     }
           }
-          return _comClient;
 }
 
 MainServer::MainServer()
@@ -61,8 +75,11 @@ MainServer::~MainServer()
 #endif
           //¹Ø±ÕËùÓĞµÄÆäËû¿Í»§¶Ë
           for (auto ib = m_connClients.begin(); ib != m_connClients.end(); ++ib) {
-                    (*ib)->socketClose();
+                    (*ib).socketClose();
           }
+          FD_ZERO(&_fdRead);                        //Çå¿Õfd_set½á¹¹ÖĞµÄÊıÁ¿
+          FD_ZERO(&_fdWrite);                       //Çå¿Õfd_set½á¹¹ÖĞµÄÊıÁ¿
+          FD_ZERO(&_fdException);                //Çå¿Õfd_set½á¹¹ÖĞµÄÊıÁ¿
 }
 
 bool MainServer::initlizeServer()
@@ -82,6 +99,16 @@ void MainServer::clientAddrLogger(const Socket& _client)               //Clientµ
           std::lock_guard<std::mutex> lock(m_loggerDisplayMutex);
           std::cout << "[Client Online Alert!] : IP=" << ::inet_ntoa(_client.m_addrInfo.sin_addr)
                     << "Port = " << _client.m_addrInfo.sin_port << std::endl;
+}
+
+std::vector<Socket>::iterator MainServer::FindSocket(const SOCKET& s)
+{
+          for (auto ib = m_connClients.begin(); ib != m_connClients.end(); ib++) {
+                    if ((*ib).getSocketConnStatus() && (*ib).m_socket == s) {            //ÅĞ¶ÏÁ¬½Ó×´Ì¬ºÍÆ¥Åä×´Ì¬
+                              return ib;
+                    }
+          }
+          return m_connClients.end();             //Ã»ÓĞÕÒµ½
 }
 
 void MainServer::clientService(Socket& _client)                            //ºËĞÄÒµÎñº¯Êı

@@ -63,6 +63,9 @@ bool Socket::getSocketConnStatus()
           return m_socketStatus;
 }
 
+SOCKET Socket::getSocket(){
+          return m_socket;
+}
 
 SOCKET Socket::createTCPSocket()
 {
