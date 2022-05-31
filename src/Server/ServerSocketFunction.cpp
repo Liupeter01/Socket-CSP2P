@@ -16,7 +16,7 @@ Socket::Socket(unsigned long _ipaddr, unsigned short _port)
 
 Socket::~Socket()
 {
-          if (!socketClose(&this->m_socket)) {
+          if (!socketClose()) {
                     std::cout << "SOCKET关闭失败" << std::endl;
                     return;
           }
@@ -34,13 +34,13 @@ int  Socket::socketAddrBind() {                 //Socket地址绑定工具仅限服务器
 #endif
 }
 
-bool  Socket::socketClose(SOCKET* _socket) {
+bool  Socket::socketClose() {
           try {
-                    if (*_socket == INVALID_SOCKET) {
+                    if (this->m_socket == INVALID_SOCKET) {
                               throw SocketCloseFailed();
                     }
-                    closesocket(*_socket);
-                    *_socket = INVALID_SOCKET;
+                    closesocket(this->m_socket);
+                    this->m_socket = INVALID_SOCKET;
           }
           catch (const SocketCloseFailed&) {
 #ifdef _DEBUG

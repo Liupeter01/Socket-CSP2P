@@ -12,21 +12,38 @@ Socket& MainServer::acceptClientCom(Socket& _comClient, const Socket& _listenSer
           if (_comClient.m_socket == INVALID_SOCKET) {
                     _comClient.m_socket = _comClient.createTCPSocket();
           }
-          try {
-                    _comClient.m_socketStatus = true;
-                    std::lock_guard<std::mutex>_lck(m_acceptMutex);             //构造析构锁
-                    if ((_comClient.m_socket = accept(_listenServer.m_socket,
-                              reinterpret_cast<sockaddr*>(&_comClient.m_addrInfo),
-                              &_comClient.m_socketSizeInfo)) == INVALID_SOCKET)
-                    {
-                              throw ClientConnectFailed();
-                    }
+          /*在此处加入Selectsocket*/
+          FD_SET(_comClient.m_socket, &_fdRead);
+          FD_SET(_comClient.m_socket, &_fdWrite);
+          FD_SET(_comClient.m_socket, &_fdException);
+
+          FD_ZERO(&_fdRead);                        //清空fd_set结构中的数量
+          FD_ZERO(&_fdWrite);                       //清空fd_set结构中的数量
+          FD_ZERO(&_fdException);                //清空fd_set结构中的数量
+          if (::select(_comClient.m_socket + 1, &_fdRead, &_fdWrite, &_fdException, NULL) < 0) {    //出现错误
+                    std::cout << "SELECT 工作错误!" << std::endl;
           }
-          catch (const  ClientConnectFailed&) {
-                    _comClient.m_socketStatus = false;
+          else
+          {
+                    if (FD_ISSET(_comClient.m_socket, &_fdRead)) {                //是否已经设置读取描述符
+                              FD_CLR(_comClient.m_socket, &_fdRead);                 //在_fdRead中进行清除
+                              try {
+                                        _comClient.m_socketStatus = true;
+                                        std::lock_guard<std::mutex>_lck(m_acceptMutex);             //构造析构锁
+                                        if ((_comClient.m_socket = accept(_listenServer.m_socket,
+                                                  reinterpret_cast<sockaddr*>(&_comClient.m_addrInfo),
+                                                  &_comClient.m_socketSizeInfo)) == INVALID_SOCKET)
+                                        {
+                                                  throw ClientConnectFailed();
+                                        }
+                              }
+                              catch (const  ClientConnectFailed&) {
+                                        _comClient.m_socketStatus = false;
 #ifdef _DEBUG
-                    std::cout << "[DEBUG INFO] : CLIENT CONNECT ERROR! \n" << WSAGetLastError() << std::endl;
+                                        std::cout << "[DEBUG INFO] : CLIENT CONNECT ERROR! \n" << WSAGetLastError() << std::endl;
 #endif 
+                              }
+                    }
           }
           return _comClient;
 }
@@ -42,15 +59,9 @@ MainServer::~MainServer()
 #ifdef WINDOWSPLATFROM                                                                              //Windows 平台适配
           ::WSACleanup();
 #endif
-          for (auto ib = m_recivedDataPacket.begin(); ib != m_recivedDataPacket.end(); ib++) {
-                    if (*ib == nullptr) {
-                              delete* ib;
-                    }
-          }
-          for (auto ib = m_sentDataPacket.begin(); ib != m_sentDataPacket.end(); ib++) {
-                    if (*ib == nullptr) {
-                              delete* ib;
-                    }
+          //关闭所有的其他客户端
+          for (auto ib = m_connClients.begin(); ib != m_connClients.end(); ++ib) {
+                    (*ib)->socketClose();
           }
 }
 

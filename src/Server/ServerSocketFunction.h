@@ -22,7 +22,7 @@ public:
           virtual ~Socket();
 public:
           void setSocketAddr(unsigned long _ipaddr, unsigned short _port);        //Socket地址设置工具
-          bool socketClose(SOCKET* socket);
+          bool socketClose();
           bool getSocketConnStatus();                 //Socket是否建立连接
           int PackageRecv(char* lppackage, int offset, int Length);
           int PackageSend(const char* lppackage, int offset, int Length);
@@ -53,11 +53,13 @@ public:
           template<typename T>
           static  void cleanArray(T* _array, int size);
 private:
+          fd_set _fdRead;                                                                                      //监视文件描述符的可读(接收)集合
+          fd_set _fdWrite;                                                                                    //监视文件描述符的可写(发送)集合
+          fd_set _fdException;                                                                             //缺省
           std::mutex m_acceptMutex;                                                                 //accept锁
           std::mutex m_loggerDisplayMutex;                                                    //服务端消息输出锁
           std::mutex m_dataPacketMutex;                                                          //数据报文记录器锁
-          std::vector<  DataPacketHeader*> m_recivedDataPacket;               //数据报接收记录器
-          std::vector<  DataPacketHeader*> m_sentDataPacket;                   //数据报发送记录器
+          std::vector< Socket*> m_connClients;                //客户端连接记录器
           WSADATA _wsadata;                                                                         //wsadata
           int _retValue = 0;                                                                                  //服务器函数返回值
 };
