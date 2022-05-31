@@ -14,6 +14,7 @@ public:
 
 /*declare zone*/
 class MainServer;
+class EventSelectStruct;
 
 class Socket {
 public:
@@ -32,6 +33,8 @@ public:
           int socketAddrBind();                                                                              //Socket地址绑定工具仅限服务器
 private:
           friend MainServer;
+          friend EventSelectStruct;
+
           static SOCKET createTCPSocket();               //创建TCP socket
           SOCKADDR_IN&& createAddrDef(unsigned long _ipaddr, unsigned short _port);     //创建地址描述结构
 private:
@@ -43,26 +46,52 @@ private:
 
 class MainServer{
 public:
-          MainServer();
+          MainServer(timeval& t);
           virtual ~MainServer();
 public:
           bool initlizeServer();                                                                              //初始化服务器
           int setListenQueue(const Socket& _listenserver, int _queueSize);  //允许的ACK半连接队列缓冲大小
 
           void acceptClientCom(const Socket& _listenServer);                     //将半连接转全连接,并将连接客户端压入容器
+          void eventSelectCom(const Socket& _listenServer);                                                                  //事件选择网络模型
           void clientAddrLogger(const Socket& _client);                              //Client地址记录器
-          void clientService(Socket& _client)      ;                                     //业务处理函数
+          bool clientService(Socket& _client)      ;                                     //业务处理函数
           std::vector<Socket>::iterator FindSocket(const SOCKET& s);                            //寻找是否存在Socket
           template<typename T>
           static  void cleanArray(T* _array, int size);
 private:
-          fd_set _fdRead;                                                                                      //监视文件描述符的可读(接收)集合
-          fd_set _fdWrite;                                                                                    //监视文件描述符的可写(发送)集合
-          fd_set _fdException;                                                                             //缺省
+          Socket m_connSocket;
+          timeval* m_timesetting;                                                                       //服务器超时事件
           std::mutex m_acceptMutex;                                                                 //accept锁
           std::mutex m_loggerDisplayMutex;                                                    //服务端消息输出锁
           std::mutex m_dataPacketMutex;                                                          //数据报文记录器锁
           std::vector< Socket> m_connClients;                //客户端连接记录器
           WSADATA _wsadata;                                                                         //wsadata
           int _retValue = 0;                                                                                  //服务器函数返回值
+};
+
+class EventSelectStruct{
+public:
+          EventSelectStruct(const Socket& listenserver, timeval& _timeval);
+          virtual ~EventSelectStruct();
+public:
+          int StartSelect();
+          int isSelectSocketRead();                                                 //判断是否设置读取描述符
+          int isSelectSocketWrite();                                                 //判断是否设置读取描述符
+          int isSelectSocketException();                                                 //判断是否设置读取描述符
+          void cleanSelectSocketRead(const Socket& s);                                            //清除Select模型的写入
+          void cleanSelectSocketWrite(const Socket& s);                                                 //清除Select模型的发送
+          void cleanSelectSocketException(const Socket& s);                                          //清除Select模型的异常
+          void updateClientConn(const std::vector<Socket>& vec);        //批量更新客户的连接
+          void updateClientConn(const Socket& s);                               //更新刚连接的客户
+          size_t getReadCount();                                                            //读取的Select数据个数
+          size_t getWriteCount();                                                            //写入的Select数据个数
+          size_t getExceptionCount();                                                            //异常的Select数据个数
+          std::vector<Socket>::iterator getReadSocket(std::vector<Socket>& vec, int pos);                 //根据socket的下标位置查询
+public:
+          const Socket& m_listenServer;
+          fd_set m_fdRead;                                                    //监视文件描述符的可读(接收)集合
+          fd_set m_fdWrite;                                                   //监视文件描述符的可写(发送)集合
+          fd_set m_fdException;                                            //缺省
+          timeval* m_timeset;
 };
