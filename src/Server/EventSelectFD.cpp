@@ -1,5 +1,15 @@
 #include"ServerSocketFunction.h"
 
+EventSelectStruct::EventSelectStruct(const Socket& listenserver) 
+          :m_listenServer(listenserver),
+          m_timeset(NULL)
+{
+          FD_ZERO(&m_fdRead);                        //清空fd_set结构中的数量
+          FD_ZERO(&m_fdWrite);                       //清空fd_set结构中的数量
+          FD_ZERO(&m_fdException);                //清空fd_set结构中的数量
+          FD_SET(m_listenServer.m_socket, &m_fdRead);
+}
+
 EventSelectStruct::EventSelectStruct(const Socket& listenserver, timeval& _timeval)
           :m_listenServer(listenserver),
           m_timeset(new timeval (_timeval))    
@@ -7,14 +17,20 @@ EventSelectStruct::EventSelectStruct(const Socket& listenserver, timeval& _timev
           FD_ZERO(&m_fdRead);                        //清空fd_set结构中的数量
           FD_ZERO(&m_fdWrite);                       //清空fd_set结构中的数量
           FD_ZERO(&m_fdException);                //清空fd_set结构中的数量
-          FD_SET(listenserver.m_socket, &this->m_fdRead);
+          FD_SET(m_listenServer.m_socket, &m_fdRead);
 }
 
 int EventSelectStruct::StartSelect()
 {
-#ifdef WINDOWSPLATFROM
-          return ::select(m_listenServer.m_socket + 1, &m_fdRead, &m_fdWrite, &m_fdException, m_timeset);
-#endif
+          SOCKET temp;
+          int number = 0;
+          for (size_t i = 0; i < getReadCount(); ++i) {
+                    if (static_cast<int>(m_fdRead.fd_array[i]) > number) {
+                              number = static_cast<int>(m_fdRead.fd_array[i]);
+                    }
+          }
+          temp = static_cast<SOCKET>(number);
+          return ::select(temp + 1, &m_fdRead, &m_fdWrite, &m_fdException, m_timeset);
 }
 
 int EventSelectStruct::isSelectSocketRead()                                               //判断是否设置读取描述符
@@ -37,12 +53,13 @@ int EventSelectStruct::isSelectSocketException()                                
           return  ::FD_ISSET(m_listenServer.m_socket, &m_fdException);
 #endif
 }
-
-void  EventSelectStruct::cleanSelectSocketRead(const Socket &s)                      //清除Select模型的写入
+void  EventSelectStruct::cleanSelectSocketRead(const Socket*& s)                      //清除Select模型的写入
 {
-#ifdef WINDOWSPLATFROM  
+          FD_CLR(s->m_socket, &m_fdRead);
+}
+void  EventSelectStruct::cleanSelectSocketRead(const Socket& s)                      //清除Select模型的写入
+{
           FD_CLR(s.m_socket, &m_fdRead);
-#endif
 }
 
 void EventSelectStruct::cleanSelectSocketWrite(const Socket& s)                            //清除Select模型的发送
@@ -60,16 +77,20 @@ void EventSelectStruct::cleanSelectSocketException(const Socket& s)             
 }
 
 
-void EventSelectStruct::updateClientConn(const std::vector<Socket>& vec)
+void EventSelectStruct::updateClientConn(const std::vector<Socket*>& vec)
 {
-          for (int i = vec.size() - 1; i >= 0; --i) {
-                    FD_SET(vec.at(i).m_socket, &m_fdRead);
+          for (size_t i = 0; i < vec.size(); ++i) {
+                    FD_SET(vec.at(i)->m_socket, &m_fdRead);
           }
 }
-
 void EventSelectStruct::updateClientConn(const Socket& s)
 {
           FD_SET(s.m_socket, &m_fdRead);
+}
+
+void EventSelectStruct::updateClientConn(const Socket*& s)
+{
+          FD_SET(s->m_socket, &m_fdRead);
 }
 
 size_t  EventSelectStruct::getReadCount()                                                           //读取的Select数据个数
@@ -87,11 +108,11 @@ size_t  EventSelectStruct::getExceptionCount()                                  
           return m_fdException.fd_count;
 }
 
-std::vector<Socket>::iterator EventSelectStruct::getReadSocket( std::vector<Socket>& vec, int pos)
+std::vector<Socket*>::iterator EventSelectStruct::getReadSocket( std::vector<Socket*>& vec, int pos)
 {
           for (auto ib = vec.begin(); ib != vec.end(); ib++) {
                     
-                    if ((*ib).getSocketConnStatus() && (*ib).getSocket() == this->m_fdRead.fd_array[pos]) {                 //判断连接状态和匹配状态       
+                    if ((*ib)->getSocketConnStatus() && (*ib)->getSocket() == this->m_fdRead.fd_array[pos]) {                 //判断连接状态和匹配状态       
                               return ib;
                     }
           }
@@ -101,7 +122,7 @@ std::vector<Socket>::iterator EventSelectStruct::getReadSocket( std::vector<Sock
 EventSelectStruct::~EventSelectStruct() 
 {
           delete m_timeset;
-          FD_ZERO(&m_fdRead);                        //清空fd_set结构中的数量
-          FD_ZERO(&m_fdWrite);                       //清空fd_set结构中的数量
-          FD_ZERO(&m_fdException);                //清空fd_set结构中的数量
+          //FD_ZERO(&m_fdRead);                        //清空fd_set结构中的数量
+          //FD_ZERO(&m_fdWrite);                       //清空fd_set结构中的数量
+          //FD_ZERO(&m_fdException);                //清空fd_set结构中的数量
 }

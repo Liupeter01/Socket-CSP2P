@@ -8,29 +8,31 @@ void MainServer::cleanArray(T* _array, int size) {
 }
 
 /*ÓÅ»¯·şÎñÆ÷acceptµÄ·½Ê½*/
-void MainServer::acceptClientCom(const Socket& _listenServer)
+Socket* MainServer::acceptClientCom(const Socket& _listenServer)
 {
+          Socket* socketTemp(new Socket);
           try {
-                    m_connSocket.m_socket = Socket::createTCPSocket();                                        //Í¨ĞÅµÄ¿Í»§¶ËsocketµÄ´´½¨ 
-                    m_connSocket.m_socketStatus = true;
+                    socketTemp->m_socket = Socket::createTCPSocket();                                        //Í¨ĞÅµÄ¿Í»§¶ËsocketµÄ´´½¨ 
+                    socketTemp->m_socketStatus = true;
                     std::lock_guard<std::mutex>_lck(m_acceptMutex);                                        //¹¹ÔìÎö¹¹Ëø
-                    if ((m_connSocket.m_socket = accept(_listenServer.m_socket,
-                              reinterpret_cast<sockaddr*>(&m_connSocket.m_addrInfo),
-                              &m_connSocket.m_socketSizeInfo)) == INVALID_SOCKET)
+                    if ((socketTemp->m_socket = accept(_listenServer.m_socket,
+                              reinterpret_cast<sockaddr*>(&socketTemp->m_addrInfo),
+                              &socketTemp->m_socketSizeInfo)) == INVALID_SOCKET)
                     {
                               throw ClientConnectFailed();
                     }
-                    clientAddrLogger(m_connSocket);                                                                     //½øĞĞ·şÎñ¶ËÁ¬½ÓµÄ¿Í»§¶ËµÄµØÖ·ÏÔÊ¾
-                    m_connClients.push_back(m_connSocket);                                                          //½«¿Í»§¶ËSocketÑ¹ÈëÈİÆ÷
-                   
+                    clientAddrLogger(*socketTemp);                                                                     //½øĞĞ·şÎñ¶ËÁ¬½ÓµÄ¿Í»§¶ËµÄµØÖ·ÏÔÊ¾
+                    socketTemp->m_socketStatus = true;
+                    m_connClients.push_back(socketTemp);                                                          //½«¿Í»§¶ËSocketÑ¹ÈëÈİÆ÷
+                    socketTemp->m_socketStatus = true;
           }
           catch (const  ClientConnectFailed&) {
-                    m_connSocket.m_socketStatus = false;
+                   m_connSocket->m_socketStatus = false;
                     #ifdef  _DEBUG
                     std::cout << "[DEBUG INFO] : CLIENT CONNECT ERROR! \n" << WSAGetLastError() << std::endl;
           #endif 
           }
-         
+          return socketTemp;
 }
 
 void MainServer::eventSelectCom(const Socket& _listenServer)
@@ -42,27 +44,28 @@ void MainServer::eventSelectCom(const Socket& _listenServer)
                     eventSelect.updateClientConn(this->m_connClients);                                                    //Èç¹û¿Í»§¶ËÃ»ÓĞÍË³öÔò¼ÌĞø¸üĞÂµ½ÎÄ¼şÃèÊö·ûfd_setµÄĞÅÏ¢
                     if (eventSelect.StartSelect() < 0) {                                                                                        //³öÏÖ´íÎó
                               std::cout << "SELECT ¹¤×÷´íÎó!    " << WSAGetLastError() << std::endl;
-                              continue;
                     }
                     else
                     {
-                              if (!eventSelect.isSelectSocketRead()) {               //ÊÇ·ñ¶ÁÈ¡ÃèÊö·û±ä»¯£¬Ôò´¦ÀíÒÑ¾­½¨Á¢µÄÁ¬½Ó
-                                        acceptClientCom(_listenServer);
-                                        eventSelect.updateClientConn(m_connSocket);                            //¸üĞÂ¸ÕÁ¬ÈëµÄ¿Í»§¶ËµÄĞÅÏ¢
+                              if (eventSelect.isSelectSocketRead()) {               //ÊÇ·ñ¶ÁÈ¡ÃèÊö·ûÊÇ·ñ±ä»¯´¦ÀíĞÂ½¨Á¢µÄÁ¬½Ó
+                                        const Socket* ConnectSocket = this->acceptClientCom(_listenServer);           //½ÓÊÕĞÂÁ¬½Ó²¢¸üĞÂ
+                                        eventSelect.updateClientConn(ConnectSocket);
                               }
                               eventSelect.cleanSelectSocketRead(_listenServer);      //ÔÚ_fdReadÖĞ½øĞĞÇå³ı
                               for (size_t i = 0; i < eventSelect.getReadCount(); ++i) {      //±éÀúfd_set.fd_array[i]
-                                        auto iter = eventSelect.getReadSocket(this->m_connClients, i);
-                                        if (iter != m_connClients.end() && (*iter).m_socket != INVALID_SOCKET) {
+                                        const std::vector<Socket*>::iterator iter = eventSelect.getReadSocket(this->m_connClients, i);
+                                        if (iter != m_connClients.end() && (*iter)->m_socket != INVALID_SOCKET) {
                                                   if (clientService(*iter))                   //ÓÃ»§Ö÷¶¯¹Ø±Õlogout
                                                   {
-                                                            eventSelect.cleanSelectSocketRead((*iter));
+                                                            const Socket* socket = (*iter)->getMySelf();
+                                                            eventSelect.cleanSelectSocketRead(socket);
                                                             m_connClients.erase(iter);    //Íê³ÉºóÉ¾³ı
                                                   }
                                         }
-                              }
+                              }      
                     }
                     //DO STH ELSE
+                    //std::this_thread::sleep_for(std::chrono::seconds(1));
           }
 }
 
@@ -70,18 +73,20 @@ void MainServer::eventSelectCom(const Socket& _listenServer)
 MainServer::MainServer(timeval &t):
           m_timesetting(new timeval(t))
 {
+          m_connSocket = new Socket;
           this->_retValue = 0;
           this->_wsadata = { 0 };
 }
 
 MainServer::~MainServer()
 {
+          delete m_connSocket;
 #ifdef WINDOWSPLATFROM                                                                              //Windows Æ½Ì¨ÊÊÅä
           ::WSACleanup();
 #endif
           //¹Ø±ÕËùÓĞµÄÆäËû¿Í»§¶Ë
           for (auto ib = m_connClients.begin(); ib != m_connClients.end(); ++ib) {
-                    (*ib).socketClose();
+                    (*ib)->socketClose();
           }
 }
 
@@ -104,22 +109,22 @@ void MainServer::clientAddrLogger(const Socket& _client)               //Clientµ
                     << " Port = " << _client.m_addrInfo.sin_port << std::endl;
 }
 
-std::vector<Socket>::iterator MainServer::FindSocket(const SOCKET& s)
+std::vector<Socket*>::iterator MainServer::FindSocket(const SOCKET& s)
 {
           for (auto ib = m_connClients.begin(); ib != m_connClients.end(); ib++) {
-                    if ((*ib).getSocketConnStatus() && (*ib).m_socket == s) {            //ÅĞ¶ÏÁ¬½Ó×´Ì¬ºÍÆ¥Åä×´Ì¬
+                    if ((*ib)->getSocketConnStatus() && (*ib)->m_socket == s) {            //ÅĞ¶ÏÁ¬½Ó×´Ì¬ºÍÆ¥Åä×´Ì¬
                               return ib;
                     }
           }
           return m_connClients.end();             //Ã»ÓĞÕÒµ½
 }
 
-bool MainServer::clientService(Socket& _client)                            //ºËĞÄÒµÎñº¯Êı
+bool MainServer::clientService(Socket*& _client)                            //ºËĞÄÒµÎñº¯Êı
 {
           bool _shutdownflag(false);
           char szRecvBuffer[4096]{ 0 };                                                                                   //½ÓÊÜ»º³åÇø
           char szSendBuffer[4096]{ 0 };                                                                                   //·¢ËÍ»º³åÇø
-          if ((_retValue = _client.PackageRecv(szRecvBuffer, 0, sizeof(DataPacketHeader))) > 0)   //ÏÈ¶ÁÈ¡ÏûÏ¢Í·ÎŞÆ«ÒÆ
+          if ((_retValue = _client->PackageRecv(szRecvBuffer, 0, sizeof(DataPacketHeader))) > 0)   //ÏÈ¶ÁÈ¡ÏûÏ¢Í·ÎŞÆ«ÒÆ
           {
                     /* ³öÏÖÉÙ°üµÄÇé¿ö*/
                     if (_retValue < sizeof(DataPacketHeader)) {
@@ -130,7 +135,7 @@ bool MainServer::clientService(Socket& _client)                            //ºËĞ
                               DataPacketBody* body(reinterpret_cast<DataPacketBody*>(
                                         reinterpret_cast<char*>(szRecvBuffer) + header->getPacketLength() - sizeof(DataPacketHeader)));
                               DataTransferState* state(reinterpret_cast<DataTransferState*>(szSendBuffer));
-                              _retValue = _client.PackageRecv(szRecvBuffer, sizeof(DataPacketHeader), header->getPacketLength() - sizeof(DataPacketHeader));     //Æ«ÒÆÒ»¸öÏûÏ¢Í·µÄ³¤¶È
+                              _retValue = _client->PackageRecv(szRecvBuffer, sizeof(DataPacketHeader), header->getPacketLength() - sizeof(DataPacketHeader));     //Æ«ÒÆÒ»¸öÏûÏ¢Í·µÄ³¤¶È
                               if (header->getPacketCommand() == CMD_LOGIN) {              //µÇÈë×´Ì¬È·¶¨
                                         std::cout << "ÊÕµ½ÃüÁîĞÅÏ¢ CMD_LOGIN:" << std::endl;
                                         cleanArray<char>(szSendBuffer, sizeof(szSendBuffer) / sizeof(char));
@@ -148,7 +153,7 @@ bool MainServer::clientService(Socket& _client)                            //ºËĞ
                                         cleanArray<char>(szSendBuffer, sizeof(szSendBuffer) / sizeof(char));
                                         state = new (szSendBuffer)  DataTransferState(CMD_ERROR);
                               }
-                              _retValue = _client.PackageSend(szSendBuffer, 0, state->getPacketLength());
+                              _retValue = _client->PackageSend(szSendBuffer, 0, state->getPacketLength());
                               cleanArray<char>(szRecvBuffer, sizeof(szRecvBuffer) / sizeof(char));
                               cleanArray<char>(szSendBuffer, sizeof(szSendBuffer) / sizeof(char));
                     }
