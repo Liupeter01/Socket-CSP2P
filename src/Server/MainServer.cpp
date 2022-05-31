@@ -10,7 +10,6 @@ int main()
                               if (!_server.setListenQueue(_listenServer, 10)) {                      //允许的ACK半连接队列缓冲大小
                                         while (1) {
                                                   std::cout << "开始进入监听模式，等待客户端的连接........" << std::endl;
-                                                  Socket _comClient;
                                                   _server.acceptClientCom(_listenServer);                     //在监听socket接受客户端的连接
                                         }
                               }

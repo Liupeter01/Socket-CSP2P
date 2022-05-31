@@ -149,9 +149,9 @@ void MainServer::clientService(Socket& _client)                            //ºËÐ
                                         _retValue = _client.PackageSend(szSendBuffer, 0, state->getPacketLength());
                                         cleanArray<char>(szRecvBuffer, sizeof(szRecvBuffer) / sizeof(char));
                                         cleanArray<char>(szSendBuffer, sizeof(szSendBuffer) / sizeof(char));
-                                        if (_shutdownflag) {                               //ÍË³ö³ÌÐò
+                                       if (_shutdownflag) {                               //ÍË³ö³ÌÐò
                                                   break;
-                                        }
+                                      }
                               }
                     }
                     else {
