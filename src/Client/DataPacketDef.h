@@ -1,12 +1,14 @@
 #include"Common.h"
 
 enum  CMD {
+          CMD_ESTABLISHED,     //连接建立成功但是没有登录
           CMD_LOGIN,                    //login
           CMD_LOGIN_RESULT,   //login result
           CMD_LOGOUT,                //logout
           CMD_LOGOUT_RESULT,//logout result
           CMD_ERROR,                     //error
           CMD_NEWMEMBER_JOINED,          //新的客户端加入
+          CMD_MEMBER_LEAVED,          //已连接的客户端离开
           DEFAULT                            //no action!
 };
 
@@ -19,6 +21,7 @@ class DataPacketHeader {
 public:
           DataPacketHeader();
           virtual ~DataPacketHeader();
+public:
           virtual void* getPacketAddr();
           int getPacketLength();
           enum CMD getPacketCommand();
@@ -73,6 +76,7 @@ private:
 class ClientUpdatePackage :public DataPacketHeader {
 public:
           ClientUpdatePackage();
+          ClientUpdatePackage(enum  CMD _cmdCommand);
 public:
           virtual void* getPacketAddr();
 };

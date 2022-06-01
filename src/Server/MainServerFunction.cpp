@@ -97,6 +97,18 @@ void MainServer::eventSelectCom(const Socket& _listenServer)
                               if (eventSelect.isSelectSocketRead()) {               //是否读取描述符是否变化处理新建立的连接
                                         const Socket* ConnectSocket = this->acceptClientCom(_listenServer);           //接收新连接并更新
                                         eventSelect.updateClientConn(ConnectSocket);
+                                        for (size_t i = 0; i < this->m_connClients.size(); ++i) {
+                                                  char szSendBuffer[1024]{ 0 };
+                                                  ClientUpdatePackage* packet = reinterpret_cast<ClientUpdatePackage*>(szSendBuffer);
+                                                  if (this->m_connClients.at(i) != ConnectSocket) {                               //不用将自己发给自己
+                                                           char szSendBuffer[1024]{ 0 };
+                                                            packet = new (szSendBuffer)  ClientUpdatePackage(CMD_NEWMEMBER_JOINED);
+                                                 }
+                                                  else {                                                                                                     //连接建立成功但是没有登录
+                                                            packet = new (szSendBuffer)  ClientUpdatePackage(CMD_ESTABLISHED);
+                                                  }
+                                                  this->m_connClients.at(i)->PackageSend(szSendBuffer, 0, packet->getPacketLength());
+                                        }
                               }
                               eventSelect.cleanSelectSocketRead(_listenServer);      //在_fdRead中进行清除
                               for (size_t i = 0; i < eventSelect.getReadCount(); ++i) {      //遍历fd_set.fd_array[i]
@@ -107,6 +119,11 @@ void MainServer::eventSelectCom(const Socket& _listenServer)
                                                             const Socket* socket = (*iter)->getMySelf();
                                                              eventSelect.cleanSelectSocketRead(socket);
                                                             m_connClients.erase(iter);    //完成后删除
+                                                            for (size_t i = 0; i < this->m_connClients.size(); ++i) {            //在客户端推出后再次更新
+                                                                      char szSendBuffer[1024]{ 0 };
+                                                                      ClientUpdatePackage* packet = new (szSendBuffer)  ClientUpdatePackage(CMD_MEMBER_LEAVED);
+                                                                      this->m_connClients.at(i)->PackageSend(szSendBuffer, 0, packet->getPacketLength());
+                                                            }
                                                   }
                                         }
                               }

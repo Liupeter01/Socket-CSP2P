@@ -24,6 +24,10 @@ public:
           SOCKET getSocket(); 
           int PackageRecv(char* lppackage, int offset, int Length);
           int PackageSend(const char* lppackage, int offset, int Length);
+          Socket* getMySelf() {
+                    return this;
+          }
+
           /*Client Only*/
           int socketConnectServer();                                                                                                //socket连接服务器
 
@@ -43,14 +47,19 @@ private:
 
 class MainClient {
 public:
-          MainClient();
+          MainClient(timeval& t);;
           virtual ~MainClient();
 public:
           bool initlizeClient();                                                                              //初始化服务器
           void sventSelectCom(Socket& _client);                                     //事件选择网络
           bool UserService(Socket& _client);                                                       //业务处理函数
-          template<typename T>static void cleanArray(T* _array, int size);      //数组清理工具
+          template<typename T>
+          static void cleanArray(T* _array, int size);      //数组清理工具
+          
+
 private:
+          timeval* m_timesetting;                                                                       //客户端超时事件
+          DataPacketHeader m_packetHeader;                                                    //用于函数绑定器                           
           std::mutex m_DisplayMutex;                                                               //服务端消息输出锁
           std::mutex m_dataPacketMutex;                                                          //数据报文记录器锁
           std::list<  DataPacketHeader*> m_recivedDataPacket;               //数据报接收记录器

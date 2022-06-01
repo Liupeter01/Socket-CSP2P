@@ -32,8 +32,11 @@ public:
                     return this;
           }
 
+          /*Client Only*/
+          int socketConnectServer();                                                                                                //socket连接服务器
+
           /*Server Only*/
-          int socketAddrBind();                                                                              //Socket地址绑定工具仅限服务器
+          int socketAddrBind();                                                                                                      //Socket地址绑定工具仅限服务器
 private:
           friend MainServer;
           friend EventSelectStruct;

@@ -1,12 +1,14 @@
 #include"Common.h"
 
 enum  CMD {
+          CMD_ESTABLISHED,     //连接建立成功但是没有登录
           CMD_LOGIN,                    //login
           CMD_LOGIN_RESULT,   //login result
           CMD_LOGOUT,                //logout
           CMD_LOGOUT_RESULT,//logout result
           CMD_ERROR,                     //error
           CMD_NEWMEMBER_JOINED,          //新的客户端加入
+          CMD_MEMBER_LEAVED,          //已连接的客户端离开
           DEFAULT                            //no action!
 };
 
@@ -18,12 +20,13 @@ enum  CMD {
 class DataPacketHeader {
 public:
           DataPacketHeader();
-          virtual ~DataPacketHeader(); 
+          virtual ~DataPacketHeader();
+public:
           virtual void* getPacketAddr();
-          int getPacketLength(); 
-          enum CMD getPacketCommand(); 
+          int getPacketLength();
+          enum CMD getPacketCommand();
 protected:
-          DataPacketHeader(int _dataLength, enum  CMD _cmdCommand); 
+          DataPacketHeader(int _dataLength, enum  CMD _cmdCommand);
 private:
           int _dataLength;                 //数据报文Body数据长度
           enum  CMD _command;     //数据报文命令信息
@@ -39,7 +42,7 @@ public:
           ConnectControlPackage();
           ConnectControlPackage(enum  CMD _cmdCommand);
           ConnectControlPackage(
-                    std::string&& _userName, 
+                    std::string&& _userName,
                     std::string&& _userPass
           );
           ConnectControlPackage(
@@ -49,14 +52,14 @@ public:
           );
           ConnectControlPackage(
                     enum  CMD _cmdCommand,
-                    std::string&& _userName, 
+                    std::string&& _userName,
                     std::string&& _userPass
           );
 
           virtual void* getPacketAddr();
 private:
-          void setUserName(std::string&& str); 
-          void setUserPass(std::string&& str); 
+          void setUserName(std::string&& str);
+          void setUserPass(std::string&& str);
           ConnectControlPackage(
                     int _datalength,
                     enum  CMD _cmdCommand
@@ -73,6 +76,7 @@ private:
 class ClientUpdatePackage :public DataPacketHeader {
 public:
           ClientUpdatePackage();
+          ClientUpdatePackage(enum  CMD _cmdCommand);
 public:
           virtual void* getPacketAddr();
 };

@@ -7,7 +7,8 @@ void MainClient::cleanArray(T* _array, int size) {
           }
 }
 
-MainClient::MainClient()
+MainClient::MainClient(timeval& t):
+          m_timesetting(new timeval(t))
 {
           this->_retValue = 0;
           this->_wsadata = { 0 };
@@ -41,7 +42,7 @@ void MainClient::sventSelectCom(Socket& _client)                //¿Í»§¶ËÓë·şÎñÆ÷
 {
           while (true)
           {
-                    EventSelectStruct eventSelect(_client);
+                    EventSelectStruct eventSelect(_client,*m_timesetting);
                     if (eventSelect.StartSelect() < 0) {              //¿Í»§¶Ë¼ì²âÊÇ·ñÊÕµ½·şÎñÆ÷µÄĞÂÏûÏ¢
                               std::cout << "SELECT ¹¤×÷´íÎó!    " << WSAGetLastError() << std::endl;
                               break;
@@ -57,17 +58,70 @@ void MainClient::sventSelectCom(Socket& _client)                //¿Í»§¶ËÓë·şÎñÆ÷
                               eventSelect.cleanSelectSocketRead(_client);                 //Çå³ı´¦Àí·şÎñÆ÷×¨ÊôÁ¬½Ósocket
                               /*ÊÇ·ñ´æÔÚÆäËûÁ¬Èë¸Ã¿Í»§¶ËµÄÆäËûÍ¨ĞÅ¿Í»§¶Ë*/
                               //for(auto ib; ; ){}
-                              UserService(_client);
+                              if (UserService(_client)) {
+                                        std::cout << "socket ¹Ø±Õ" << std::endl;
+                              }
                     }
           }
 }
+
 
 bool MainClient::UserService(Socket& _client)                            //ºËĞÄÒµÎñº¯Êı
 {
           bool _shutdownflag(false);
           char szRecvBuffer[4096]{ 0 };                                                                                   //½ÓÊÜ»º³åÇø
           char szSendBuffer[4096]{ 0 };                                                                                   //·¢ËÍ»º³åÇø
-          ConnectControlPackage* body(reinterpret_cast<ConnectControlPackage*>(reinterpret_cast<char*>(szSendBuffer)));
+
+          /*ÏÈÔËĞĞ¶ÔÓÚ·şÎñÆ÷µÄ´«ÊäÊı¾İµÄ¼ì²â³ÌĞò*/
+          DataPacketHeader* header(reinterpret_cast<DataPacketHeader*> (szRecvBuffer));
+          ClientUpdatePackage* update = reinterpret_cast<ClientUpdatePackage*>(
+                    reinterpret_cast<char*>(szRecvBuffer) + header->getPacketLength() - sizeof(DataPacketHeader));
+
+          DataTransferState* state = reinterpret_cast<DataTransferState*>(
+                    reinterpret_cast<char*>(szRecvBuffer) + header->getPacketLength() - sizeof(DataPacketHeader));
+
+          ConnectControlPackage* body = reinterpret_cast<ConnectControlPackage*>(reinterpret_cast<char*>(szSendBuffer));
+          if ((_retValue = _client.PackageRecv(szRecvBuffer, 0, sizeof(DataPacketHeader))) > 0) {   //½ÓÊÕheader
+                    if (_retValue < sizeof(DataPacketHeader)) {                        /* ³öÏÖÉÙ°üµÄÇé¿ö*/
+
+                    }
+                    else
+                    {
+                              _retValue = _client.PackageRecv(szRecvBuffer, sizeof(DataPacketHeader), header->getPacketLength() - sizeof(DataPacketHeader));     //Æ«ÒÆÒ»¸öÏûÏ¢Í·µÄ³¤¶È
+                              if (header->getPacketCommand() == CMD_LOGIN_RESULT)                             //ÓÃ»§µÇÂ¼·şÎñÆ÷³É¹¦
+                              {
+                                        std::cout << "ÓÃ»§µÇÂ½·şÎñÆ÷³É¹¦" << std::endl;
+                              }
+                              else if (header->getPacketCommand() == CMD_LOGOUT_RESULT)                  //ÓÃ»§µÇ³ö·şÎñÆ÷³É¹¦
+                              {
+                                        std::cout << "ÓÃ»§³É¹¦µÇ³ö·şÎñÆ÷" << std::endl;
+                                        _shutdownflag = true;
+                              }
+                              else if (header->getPacketCommand() == CMD_NEWMEMBER_JOINED)          //ĞÂÓÃ»§¼ÓÈë¸üĞÂclientÁĞ±í
+                              {
+                                        std::cout << "CMD_NEWMEMBER_JOINED" << std::endl;
+                                        /*¸üĞÂÁ¬½ÓµÄP2P¿Í»§¶ËµÄÁĞ±í*/
+                              }
+                              else if (header->getPacketCommand() ==CMD_MEMBER_LEAVED)               //ÒÑÁ¬½ÓµÄÓÃ»§Àë¿ª
+                              {
+                                        std::cout << "CMD_MEMBER_LEAVED" << std::endl;
+                                        /*¸üĞÂÁ¬½ÓµÄP2P¿Í»§¶ËµÄÁĞ±í*/
+                              }
+                              else if (header->getPacketCommand() == CMD_ESTABLISHED)               //ÒÑÁ¬½ÓµÄÓÃ»§Àë¿ª
+                              {
+                                        std::cout << "CMD_ESTABLISHED" << std::endl;
+                                        /*¸üĞÂÁ¬½ÓµÄP2P¿Í»§¶ËµÄÁĞ±í*/
+                              }
+                              else {
+                                        std::cout << "ÓÃ»§µÇÂ½·şÎñÆ÷´íÎó" << std::endl;
+                              }
+                              cleanArray<char>(szRecvBuffer, sizeof(szRecvBuffer) / sizeof(char));
+                    }
+          }
+          else {
+                    /*·şÎñÆ÷¿ÉÄÜÔİÊ±Ã»ÓĞÊı¾İ£¬»òÕßÁ¬½ÓÒì³£*/
+          }
+           /*·şÎñÆ÷Ã»ÓĞÊı¾İµÄ¸üĞÂ£¬Òò´Ë¿Í»§¶ËÖ´ĞĞ×Ô¼ºµÄ²Ù×÷*/
           std::string inputData;
           /*¶àÏß³ÌÊäÈë´¦Àí!!!*/
           std::cout << "ÊäÈëÄúµÄ²Ù×÷(login,logout):";
@@ -82,36 +136,5 @@ bool MainClient::UserService(Socket& _client)                            //ºËĞÄÒ
                     body = new (szSendBuffer) ConnectControlPackage(DEFAULT);
           }
           _client.PackageSend(szSendBuffer, 0, body->getPacketLength());                                 //·¢ËÍÊı¾İ±¨ÎÄ·µ»Ø×´Ì¬
-          cleanArray<char>(szSendBuffer, sizeof(szSendBuffer) / sizeof(char));
-          cleanArray<char>(szRecvBuffer, sizeof(szRecvBuffer) / sizeof(char));
-          DataPacketHeader* header(reinterpret_cast<DataPacketHeader*>(szRecvBuffer));
-          DataTransferState* state(reinterpret_cast<DataTransferState*>(
-                    reinterpret_cast<char*>(szRecvBuffer)) + header->getPacketLength() - sizeof(DataPacketHeader));
-          if ((_retValue = _client.PackageRecv(szRecvBuffer, 0, sizeof(DataPacketHeader))) > 0)   //ÏÈ¶ÁÈ¡ÏûÏ¢Í·ÎŞÆ«ÒÆ
-          {
-                    /* ³öÏÖÉÙ°üµÄÇé¿ö*/
-                    if (_retValue < sizeof(DataPacketHeader)) {
-
-                    }
-                    else {
-                              _retValue = _client.PackageRecv(szRecvBuffer, sizeof(DataPacketHeader), header->getPacketLength() - sizeof(DataPacketHeader));
-                              if (header->getPacketCommand() == CMD_LOGIN_RESULT) {
-                                        std::cout << "ÓÃ»§µÇÂ½·şÎñÆ÷³É¹¦" << std::endl;
-                              }
-                              else if (header->getPacketCommand() == CMD_LOGOUT_RESULT) {
-                                        std::cout << "ÓÃ»§µÇÂ½·şÎñÆ÷Ê§°Ü" << std::endl;
-                                        _shutdownflag = false;
-                              }
-                              else {
-                                        std::cout << "ÓÃ»§µÇÂ½·şÎñÆ÷´íÎó" << std::endl;
-                              }
-                    }
-                    cleanArray<char>(szRecvBuffer, sizeof(szRecvBuffer) / sizeof(char));
-                    cleanArray<char>(szSendBuffer, sizeof(szSendBuffer) / sizeof(char));
-          }
-          else
-          {
-
-          }
           return _shutdownflag;
 }

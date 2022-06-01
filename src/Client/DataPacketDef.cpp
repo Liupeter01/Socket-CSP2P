@@ -78,6 +78,16 @@ ConnectControlPackage::ConnectControlPackage(int _datalength, enum  CMD _cmdComm
           DataPacketHeader(_datalength, _cmdCommand) {
 }
 
+ClientUpdatePackage::ClientUpdatePackage() : DataPacketHeader()
+{
+
+}
+
+ClientUpdatePackage::ClientUpdatePackage(enum  CMD _cmdCommand) :
+          DataPacketHeader(sizeof(ClientUpdatePackage), _cmdCommand) {
+
+}
+
 void* ClientUpdatePackage::getPacketAddr()
 {
           return this;

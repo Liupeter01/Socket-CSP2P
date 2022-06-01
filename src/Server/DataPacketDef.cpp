@@ -4,22 +4,22 @@ DataPacketHeader::DataPacketHeader() :
           _dataLength(0), _command(DEFAULT) {
 }
 
-DataPacketHeader::~DataPacketHeader() 
+DataPacketHeader::~DataPacketHeader()
 {
 
 }
 
-enum CMD DataPacketHeader::getPacketCommand() 
+enum CMD DataPacketHeader::getPacketCommand()
 {
           return this->_command;
 }
 
-int DataPacketHeader::getPacketLength() 
+int DataPacketHeader::getPacketLength()
 {
           return this->_dataLength;
 }
 
-DataPacketHeader::DataPacketHeader(int _dataLength, enum  CMD _cmdCommand) 
+DataPacketHeader::DataPacketHeader(int _dataLength, enum  CMD _cmdCommand)
 {
           this->_dataLength = _dataLength + sizeof(DataPacketHeader);
           this->_command = _cmdCommand;
@@ -30,45 +30,45 @@ void* DataPacketHeader::getPacketAddr()
           return this;
 }
 
-ConnectControlPackage::ConnectControlPackage() :DataPacketHeader() 
+ConnectControlPackage::ConnectControlPackage() :DataPacketHeader()
 {
 
 }
 
-ConnectControlPackage::ConnectControlPackage(enum  CMD _cmdCommand) : 
-          DataPacketHeader(sizeof(ConnectControlPackage), _cmdCommand){
+ConnectControlPackage::ConnectControlPackage(enum  CMD _cmdCommand) :
+          DataPacketHeader(sizeof(ConnectControlPackage), _cmdCommand) {
 }
 
 ConnectControlPackage::ConnectControlPackage(std::string&& _userName, std::string&& _userPass) :
-          userName(_userName), userPassWord(_userPass){
+          userName(_userName), userPassWord(_userPass) {
 }
 
 ConnectControlPackage::ConnectControlPackage(enum  CMD _cmdCommand,
           const std::string& _userName,
           const   std::string& _userPass) :
           userName(_userName), userPassWord(_userPass),
-          DataPacketHeader(sizeof(ConnectControlPackage), _cmdCommand){
+          DataPacketHeader(sizeof(ConnectControlPackage), _cmdCommand) {
 }
 
 ConnectControlPackage::ConnectControlPackage(enum  CMD _cmdCommand,
           std::string&& _userName,
           std::string&& _userPass) :
           userName(_userName), userPassWord(_userPass),
-          DataPacketHeader(sizeof(ConnectControlPackage), _cmdCommand){
+          DataPacketHeader(sizeof(ConnectControlPackage), _cmdCommand) {
 }
 
-void* ConnectControlPackage::getPacketAddr() 
+void* ConnectControlPackage::getPacketAddr()
 {
           return this;
 }
 
-void    ConnectControlPackage::setUserName(std::string&& str) 
+void    ConnectControlPackage::setUserName(std::string&& str)
 {
           userName.erase(userName.begin(), userName.end());
           userName = str;
 }
 
-void    ConnectControlPackage::setUserPass(std::string&& str) 
+void    ConnectControlPackage::setUserPass(std::string&& str)
 {
           userPassWord.erase(userPassWord.begin(), userPassWord.end());
           userPassWord = str;
@@ -76,6 +76,16 @@ void    ConnectControlPackage::setUserPass(std::string&& str)
 
 ConnectControlPackage::ConnectControlPackage(int _datalength, enum  CMD _cmdCommand) :
           DataPacketHeader(_datalength, _cmdCommand) {
+}
+
+ClientUpdatePackage::ClientUpdatePackage():DataPacketHeader()
+{
+          
+}
+
+ClientUpdatePackage::ClientUpdatePackage(enum  CMD _cmdCommand):
+          DataPacketHeader(sizeof(ClientUpdatePackage), _cmdCommand) {
+
 }
 
 void* ClientUpdatePackage::getPacketAddr()
