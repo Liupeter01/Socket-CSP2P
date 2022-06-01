@@ -63,7 +63,6 @@ public:
           template<typename T>
           static  void cleanArray(T* _array, int size);
 private:
-          Socket *m_connSocket;
           timeval* m_timesetting;                                                                       //服务器超时事件
           std::mutex m_acceptMutex;                                                                 //accept锁
           std::mutex m_loggerDisplayMutex;                                                    //服务端消息输出锁
@@ -75,8 +74,8 @@ private:
 
 class EventSelectStruct{
 public:
-          EventSelectStruct(const Socket& listenserver);
-          EventSelectStruct(const Socket& listenserver, timeval& _timeval);
+          EventSelectStruct(const Socket& _socket);
+          EventSelectStruct(const Socket& _socket, timeval& _timeval);
           virtual ~EventSelectStruct();
 public:
           int StartSelect();

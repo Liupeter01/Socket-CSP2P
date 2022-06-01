@@ -27,7 +27,7 @@ Socket* MainServer::acceptClientCom(const Socket& _listenServer)
                     socketTemp->m_socketStatus = true;
           }
           catch (const  ClientConnectFailed&) {
-                   m_connSocket->m_socketStatus = false;
+                    socketTemp->m_socketStatus = false;
                     #ifdef  _DEBUG
                     std::cout << "[DEBUG INFO] : CLIENT CONNECT ERROR! \n" << WSAGetLastError() << std::endl;
           #endif 
@@ -35,52 +35,15 @@ Socket* MainServer::acceptClientCom(const Socket& _listenServer)
           return socketTemp;
 }
 
-void MainServer::eventSelectCom(const Socket& _listenServer)
-{
-          std::cout << "开始进入监听模式，等待客户端的连接........" << std::endl;
-          while (1) {
-                    /*在此处加入Select socket网络模型结构*/
-                    EventSelectStruct eventSelect(_listenServer, *m_timesetting);
-                    eventSelect.updateClientConn(this->m_connClients);                                                    //如果客户端没有退出则继续更新到文件描述符fd_set的信息
-                    if (eventSelect.StartSelect() < 0) {                                                                                        //出现错误
-                              std::cout << "SELECT 工作错误!    " << WSAGetLastError() << std::endl;
-                    }
-                    else
-                    {
-                              if (eventSelect.isSelectSocketRead()) {               //是否读取描述符是否变化处理新建立的连接
-                                        const Socket* ConnectSocket = this->acceptClientCom(_listenServer);           //接收新连接并更新
-                                        eventSelect.updateClientConn(ConnectSocket);
-                              }
-                              eventSelect.cleanSelectSocketRead(_listenServer);      //在_fdRead中进行清除
-                              for (size_t i = 0; i < eventSelect.getReadCount(); ++i) {      //遍历fd_set.fd_array[i]
-                                        const std::vector<Socket*>::iterator iter = eventSelect.getReadSocket(this->m_connClients, i);
-                                        if (iter != m_connClients.end() && (*iter)->m_socket != INVALID_SOCKET) {
-                                                  if (clientService(*iter))                   //用户主动关闭logout
-                                                  {
-                                                            const Socket* socket = (*iter)->getMySelf();
-                                                            eventSelect.cleanSelectSocketRead(socket);
-                                                            m_connClients.erase(iter);    //完成后删除
-                                                  }
-                                        }
-                              }      
-                    }
-                    //DO STH ELSE
-                    //std::this_thread::sleep_for(std::chrono::seconds(1));
-          }
-}
-
-
 MainServer::MainServer(timeval &t):
           m_timesetting(new timeval(t))
 {
-          m_connSocket = new Socket;
           this->_retValue = 0;
           this->_wsadata = { 0 };
 }
 
 MainServer::~MainServer()
 {
-          delete m_connSocket;
 #ifdef WINDOWSPLATFROM                                                                              //Windows 平台适配
           ::WSACleanup();
 #endif
@@ -119,6 +82,41 @@ std::vector<Socket*>::iterator MainServer::FindSocket(const SOCKET& s)
           return m_connClients.end();             //没有找到
 }
 
+void MainServer::eventSelectCom(const Socket& _listenServer)
+{
+          std::cout << "开始进入监听模式，等待客户端的连接........" << std::endl;
+          while (1) {
+                    /*在此处加入Select socket网络模型结构*/
+                    EventSelectStruct eventSelect(_listenServer, *m_timesetting);
+                    eventSelect.updateClientConn(this->m_connClients);                                                    //将之前保存的客户端继续更新到文件描述符fd_set的信息
+                    if (eventSelect.StartSelect() < 0) {                                                                                        //出现错误
+                              std::cout << "SELECT 工作错误!    " << WSAGetLastError() << std::endl;
+                    }
+                    else
+                    {
+                              if (eventSelect.isSelectSocketRead()) {               //是否读取描述符是否变化处理新建立的连接
+                                        const Socket* ConnectSocket = this->acceptClientCom(_listenServer);           //接收新连接并更新
+                                        eventSelect.updateClientConn(ConnectSocket);
+                              }
+                              eventSelect.cleanSelectSocketRead(_listenServer);      //在_fdRead中进行清除
+                              for (size_t i = 0; i < eventSelect.getReadCount(); ++i) {      //遍历fd_set.fd_array[i]
+                                        const std::vector<Socket*>::iterator iter = eventSelect.getReadSocket(this->m_connClients, i);
+                                        if (iter != m_connClients.end() && (*iter)->m_socket != INVALID_SOCKET) {
+                                                  if (clientService(*iter))                   //用户主动关闭logout
+                                                  {
+                                                            const Socket* socket = (*iter)->getMySelf();
+                                                             eventSelect.cleanSelectSocketRead(socket);
+                                                            m_connClients.erase(iter);    //完成后删除
+                                                  }
+                                        }
+                              }
+                    }
+                    //DO STH ELSE
+                    //std::this_thread::sleep_for(std::chrono::seconds(1));
+          }
+}
+
+
 bool MainServer::clientService(Socket*& _client)                            //核心业务函数
 {
           bool _shutdownflag(false);
@@ -132,7 +130,7 @@ bool MainServer::clientService(Socket*& _client)                            //核
                     }
                     else {
                               DataPacketHeader* header(reinterpret_cast<DataPacketHeader*>(szRecvBuffer));
-                              DataPacketBody* body(reinterpret_cast<DataPacketBody*>(
+                              ConnectControlPackage* body(reinterpret_cast<ConnectControlPackage*>(
                                         reinterpret_cast<char*>(szRecvBuffer) + header->getPacketLength() - sizeof(DataPacketHeader)));
                               DataTransferState* state(reinterpret_cast<DataTransferState*>(szSendBuffer));
                               _retValue = _client->PackageRecv(szRecvBuffer, sizeof(DataPacketHeader), header->getPacketLength() - sizeof(DataPacketHeader));     //偏移一个消息头的长度

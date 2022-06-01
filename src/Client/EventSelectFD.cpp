@@ -1,6 +1,6 @@
-#include"ServerSocketFunction.h"
+#include"ClientSocketFunction.h"
 
-EventSelectStruct::EventSelectStruct(const Socket& _socket) 
+EventSelectStruct::EventSelectStruct(const Socket& _socket)
           :m_listenServer(_socket),
           m_timeset(NULL)
 {
@@ -12,7 +12,7 @@ EventSelectStruct::EventSelectStruct(const Socket& _socket)
 
 EventSelectStruct::EventSelectStruct(const Socket& _socket, timeval& _timeval)
           :m_listenServer(_socket),
-          m_timeset(new timeval (_timeval))    
+          m_timeset(new timeval(_timeval))
 {
           FD_ZERO(&m_fdRead);                        //清空fd_set结构中的数量
           FD_ZERO(&m_fdWrite);                       //清空fd_set结构中的数量
@@ -108,10 +108,10 @@ size_t  EventSelectStruct::getExceptionCount()                                  
           return m_fdException.fd_count;
 }
 
-std::vector<Socket*>::iterator EventSelectStruct::getReadSocket( std::vector<Socket*>& vec, int pos)
+std::vector<Socket*>::iterator EventSelectStruct::getReadSocket(std::vector<Socket*>& vec, int pos)
 {
           for (auto ib = vec.begin(); ib != vec.end(); ib++) {
-                    
+
                     if ((*ib)->getSocketConnStatus() && (*ib)->getSocket() == this->m_fdRead.fd_array[pos]) {                 //判断连接状态和匹配状态       
                               return ib;
                     }
@@ -119,7 +119,7 @@ std::vector<Socket*>::iterator EventSelectStruct::getReadSocket( std::vector<Soc
           return vec.end();             //没有找到
 }
 
-EventSelectStruct::~EventSelectStruct() 
+EventSelectStruct::~EventSelectStruct()
 {
           delete m_timeset;
           //FD_ZERO(&m_fdRead);                        //清空fd_set结构中的数量
