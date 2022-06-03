@@ -1,7 +1,7 @@
 #include"DataPacketDef.h"
 
 DataPacketHeader::DataPacketHeader() :
-          _dataLength(0), _command(DEFAULT) {
+          _dataLength(0), _command(CMD::DEFAULT) {
 }
 
 DataPacketHeader::~DataPacketHeader()

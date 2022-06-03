@@ -85,13 +85,13 @@ void MainClient::UserInput(Socket& _client)                           //ÓÃ»§ÊäÈë
                     }
                    
                     if (inputData.length() != 0 && !strcmp(inputData.c_str(), "login")) {
-                              body = new (szSendBuffer)  ConnectControlPackage(CMD_LOGIN, "ADMIN", "ADMIN");
+                              body = new (szSendBuffer)  ConnectControlPackage(CMD::CMD_LOGIN, "ADMIN", "ADMIN");
                     }
                     else if (inputData.length() != 0 && !strcmp(inputData.c_str(), "logout")) {
-                              body = new (szSendBuffer)  ConnectControlPackage(CMD_LOGOUT);
+                              body = new (szSendBuffer)  ConnectControlPackage(CMD::CMD_LOGOUT);
                     }
                     else {
-                              body = new (szSendBuffer) ConnectControlPackage(DEFAULT);
+                              body = new (szSendBuffer) ConnectControlPackage(CMD::DEFAULT);
                     }
                     _client.PackageSend(szSendBuffer, 0, body->getPacketLength());                                 //·¢ËÍÊý¾Ý±¨ÎÄ·µ»Ø×´Ì¬
           }
@@ -118,30 +118,30 @@ bool MainClient::UserService(Socket& _client)                            //ºËÐÄÒ
                     else
                     {
                               _retValue = _client.PackageRecv(szRecvBuffer, sizeof(DataPacketHeader), header->getPacketLength() - sizeof(DataPacketHeader));     //Æ«ÒÆÒ»¸öÏûÏ¢Í·µÄ³¤¶È
-                              if (header->getPacketCommand() == CMD_LOGIN_RESULT)                             //ÓÃ»§µÇÂ¼·þÎñÆ÷³É¹¦
+                              if (header->getPacketCommand() == CMD::CMD_LOGIN_RESULT)                             //ÓÃ»§µÇÂ¼·þÎñÆ÷³É¹¦
                               {
                                         std::lock_guard<std::mutex> lock(m_DisplayMutex);
                                         std::cout << "ÓÃ»§µÇÂ½·þÎñÆ÷³É¹¦" << std::endl;
                               }
-                              else if (header->getPacketCommand() == CMD_LOGOUT_RESULT)                  //ÓÃ»§µÇ³ö·þÎñÆ÷³É¹¦
+                              else if (header->getPacketCommand() == CMD::CMD_LOGOUT_RESULT)                  //ÓÃ»§µÇ³ö·þÎñÆ÷³É¹¦
                               {
                                         std::lock_guard<std::mutex> lock(m_DisplayMutex);
                                         std::cout << "ÓÃ»§³É¹¦µÇ³ö·þÎñÆ÷" << std::endl;
                                         return true;
                               }
-                              else if (header->getPacketCommand() == CMD_NEWMEMBER_JOINED)          //ÐÂÓÃ»§¼ÓÈë¸üÐÂclientÁÐ±í
+                              else if (header->getPacketCommand() == CMD::CMD_NEWMEMBER_JOINED)          //ÐÂÓÃ»§¼ÓÈë¸üÐÂclientÁÐ±í
                               {
                                         std::lock_guard<std::mutex> lock(m_DisplayMutex);
                                         std::cout << "CMD_NEWMEMBER_JOINED" << std::endl;
                                         /*¸üÐÂÁ¬½ÓµÄP2P¿Í»§¶ËµÄÁÐ±í*/
                               }
-                              else if (header->getPacketCommand() ==CMD_MEMBER_LEAVED)               //ÒÑÁ¬½ÓµÄÓÃ»§Àë¿ª
+                              else if (header->getPacketCommand() == CMD::CMD_MEMBER_LEAVED)               //ÒÑÁ¬½ÓµÄÓÃ»§Àë¿ª
                               {
                                         std::lock_guard<std::mutex> lock(m_DisplayMutex);
                                         std::cout << "CMD_MEMBER_LEAVED" << std::endl;
                                         /*¸üÐÂÁ¬½ÓµÄP2P¿Í»§¶ËµÄÁÐ±í*/
                               }
-                              else if (header->getPacketCommand() == CMD_ESTABLISHED)               //ÒÑÁ¬½ÓµÄÓÃ»§Àë¿ª
+                              else if (header->getPacketCommand() == CMD::CMD_ESTABLISHED)               //ÒÑÁ¬½ÓµÄÓÃ»§Àë¿ª
                               {
                                         std::lock_guard<std::mutex> lock(m_DisplayMutex);
                                         std::cout << "CMD_ESTABLISHED" << std::endl;

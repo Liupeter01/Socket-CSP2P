@@ -1,6 +1,6 @@
 #include"Common.h"
 
-enum  CMD {
+enum  class CMD {
           CMD_ESTABLISHED,     //连接建立成功但是没有登录
           CMD_LOGIN,                    //login
           CMD_LOGIN_RESULT,   //login result

@@ -111,7 +111,7 @@ void MainServer::eventSelectCom(const Socket& _listenServer)
 
                                                   char szSendBuffer[1024]{ 0 };
                                                   ClientUpdatePackage* packet = reinterpret_cast<ClientUpdatePackage*>(szSendBuffer);
-                                                  packet = new (szSendBuffer)  ClientUpdatePackage(CMD_NEWMEMBER_JOINED);
+                                                  packet = new (szSendBuffer)  ClientUpdatePackage(CMD::CMD_NEWMEMBER_JOINED);
                                                   this->m_connClients.at(i)->PackageSend(szSendBuffer, 0, packet->getPacketLength());
                                         }
                               }
@@ -128,7 +128,7 @@ void MainServer::eventSelectCom(const Socket& _listenServer)
                                                             m_connClients.erase(iter);    //完成后删除
                                                             for (size_t i = 0; i < this->m_connClients.size(); ++i) {            //在客户端推出后再次更新
                                                                       char szSendBuffer[1024]{ 0 };
-                                                                      ClientUpdatePackage* packet = new (szSendBuffer)  ClientUpdatePackage(CMD_MEMBER_LEAVED);
+                                                                      ClientUpdatePackage* packet = new (szSendBuffer)  ClientUpdatePackage(CMD::CMD_MEMBER_LEAVED);
                                                                       this->m_connClients.at(i)->PackageSend(szSendBuffer, 0, packet->getPacketLength());
                                                             }
                                                   }
@@ -159,24 +159,24 @@ bool MainServer::clientService(Socket*& _client)                            //核
                               ConnectControlPackage* body(reinterpret_cast<ConnectControlPackage*>(reinterpret_cast<char*>(szRecvBuffer)));
                               DataTransferState* state(reinterpret_cast<DataTransferState*>(szSendBuffer));
                               _retValue = _client->PackageRecv(szRecvBuffer, sizeof(DataPacketHeader), header->getPacketLength() - sizeof(DataPacketHeader));     //偏移一个消息头的长度
-                              if (header->getPacketCommand() == CMD_LOGIN) {              //登入状态确定
+                              if (header->getPacketCommand() == CMD::CMD_LOGIN) {              //登入状态确定
                                         std::cout << std::endl << "收到命令信息 CMD_LOGIN:" << std::endl;
                                         std::cout << "登录ID：" << body->getUserName() << std::endl;
                                         std::cout << "登录Pass：" << body->getUserPassword() << std::endl;
                                         cleanArray<char>(szSendBuffer, sizeof(szSendBuffer) / sizeof(char));
-                                        state = new (szSendBuffer)  DataTransferState(CMD_LOGIN_RESULT);
+                                        state = new (szSendBuffer)  DataTransferState(CMD::CMD_LOGIN_RESULT);
 
                               }
-                              else if (header->getPacketCommand() == CMD_LOGOUT) {         //登出状态确定
+                              else if (header->getPacketCommand() == CMD::CMD_LOGOUT) {         //登出状态确定
                                         std::cout << std::endl << "收到命令信息 CMD_LOGOUT:" << std::endl;
                                         cleanArray<char>(szSendBuffer, sizeof(szSendBuffer) / sizeof(char));
-                                        state = new (szSendBuffer)  DataTransferState(CMD_LOGOUT_RESULT);
+                                        state = new (szSendBuffer)  DataTransferState(CMD::CMD_LOGOUT_RESULT);
                                         _shutdownflag = true;                                                              //退出当前socket处理
                               }
                               else {                                                                                              //无效指令
                                         std::cout << "收到命令信息错误" << std::endl;
                                         cleanArray<char>(szSendBuffer, sizeof(szSendBuffer) / sizeof(char));
-                                        state = new (szSendBuffer)  DataTransferState(CMD_ERROR);
+                                        state = new (szSendBuffer)  DataTransferState(CMD::CMD_ERROR);
                               }
                               _retValue = _client->PackageSend(szSendBuffer, 0, state->getPacketLength());
                               cleanArray<char>(szRecvBuffer, sizeof(szRecvBuffer) / sizeof(char));
