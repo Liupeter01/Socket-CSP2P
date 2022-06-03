@@ -30,13 +30,13 @@ void Socket::setSocketAddr(unsigned long _ipaddr, unsigned short _port)
 
 int Socket::socketConnectServer()                                                                           //远程连接服务器
 {
-#ifdef WINDOWSPLATFROM                                                                              //Windows 平台适配
+#ifdef  _WIN3264                                                                        //Windows 平台适配
           return ::connect(m_socket, reinterpret_cast<const sockaddr*>(&m_addrInfo), sizeof(SOCKADDR_IN));
 #endif 
 }
 
 int  Socket::socketAddrBind() {                 //Socket地址绑定工具仅限服务器
-#ifdef WINDOWSPLATFROM                                                                              //Windows 平台适配
+#ifdef  _WIN3264                                                                       //Windows 平台适配
           return ::bind(m_socket, reinterpret_cast<const sockaddr*>(&m_addrInfo), sizeof(SOCKADDR_IN));
 #endif
 }
@@ -94,14 +94,14 @@ SOCKADDR_IN&& Socket::createAddrDef(unsigned long _ipaddr, unsigned short _port)
 
 int Socket::PackageRecv(char* lppackage, int offset, int Length)
 {
-#ifdef WINDOWSPLATFROM       
+#ifdef  _WIN3264
           return ::recv(m_socket, lppackage + offset, Length, 0);
 #endif
 }
 
 int Socket::PackageSend(const char* lppackage, int offset, int Length)
 {
-#ifdef WINDOWSPLATFROM           
+#ifdef  _WIN3264     
           return ::send(m_socket, lppackage + offset, Length, 0);
 #endif
 }

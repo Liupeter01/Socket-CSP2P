@@ -35,21 +35,21 @@ int EventSelectStruct::StartSelect()
 
 int EventSelectStruct::isSelectSocketRead()                                               //判断是否设置读取描述符
 {
-#ifdef WINDOWSPLATFROM
+#ifdef  _WIN3264
           return  ::FD_ISSET(m_listenServer.m_socket, &m_fdRead);
 #endif
 }
 
 int EventSelectStruct::isSelectSocketWrite()                                             //判断是否设置读取描述符
 {
-#ifdef WINDOWSPLATFROM
+#ifdef  _WIN3264
           return  ::FD_ISSET(m_listenServer.m_socket, &m_fdWrite);
 #endif
 }
 
 int EventSelectStruct::isSelectSocketException()                                                //判断是否设置读取描述符
 {
-#ifdef WINDOWSPLATFROM
+#ifdef  _WIN3264
           return  ::FD_ISSET(m_listenServer.m_socket, &m_fdException);
 #endif
 }
@@ -64,14 +64,14 @@ void  EventSelectStruct::cleanSelectSocketRead(const Socket& s)                 
 
 void EventSelectStruct::cleanSelectSocketWrite(const Socket& s)                            //清除Select模型的发送
 {
-#ifdef WINDOWSPLATFROM
+#ifdef  _WIN3264
           FD_CLR(s.m_socket, &m_fdWrite);
 #endif
 }
 
 void EventSelectStruct::cleanSelectSocketException(const Socket& s)              //清除Select模型的异常
 {
-#ifdef WINDOWSPLATFROM
+#ifdef  _WIN3264
           FD_CLR(s.m_socket, &m_fdException);
 #endif
 }

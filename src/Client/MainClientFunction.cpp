@@ -29,7 +29,7 @@ MainClient::~MainClient()
 
 bool MainClient::initlizeClient()
 {
-#ifdef WINDOWSPLATFROM                                                                              //Windows 平台适配
+#ifdef  _WIN3264                                                                            //Windows 平台适配
           return WSAStartup(MAKEWORD(2, 2), &this->_wsadata);
 #endif
 }

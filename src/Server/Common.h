@@ -1,13 +1,18 @@
 #pragma once
-#define WINDOWSPLATFROM                 //Cross PlatFrom Setting
-#ifdef WINDOWSPLATFROM
+#define _WIN3264                 //Cross PlatFrom Setting
+#ifdef _WIN3264   
 #define WIN32_LEAN_AND_MEAN
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include<WinSock2.h>
 #pragma comment(lib,"ws2_32.lib")
 #else
+#include<unistd.h>
+#include<arpa/inet.h>
 #include<sys/socket.h>
-#endif //WINDOWSPLATFROM
+#define SOCKET int
+#define INVALID_SOCKET (SOCKET)(~0)
+#define SOCKET_ERROR (-1)
+#endif //_WIN3264  
 
 #define PORT 8833
 
