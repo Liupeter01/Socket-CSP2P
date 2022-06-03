@@ -21,7 +21,7 @@ Socket* MainServer::acceptClientCom(const Socket& _listenServer)
                     {
                               throw ClientConnectFailed();
                     }
-                    clientAddrLogger(*socketTemp);                                                                     //½øÐÐ·þÎñ¶ËÁ¬½ÓµÄ¿Í»§¶ËµÄµØÖ·ÏÔÊ¾
+                    clientConnectLogger(*socketTemp);                                                                     //½øÐÐ·þÎñ¶ËÁ¬½ÓµÄ¿Í»§¶ËµÄµØÖ·ÏÔÊ¾
                     socketTemp->m_socketStatus = true;
                     m_connClients.push_back(socketTemp);                                                          //½«¿Í»§¶ËSocketÑ¹ÈëÈÝÆ÷
                     socketTemp->m_socketStatus = true;
@@ -65,11 +65,18 @@ int  MainServer::setListenQueue(const Socket& _listenserver, int _queueSize) //Ô
           return ::listen(_listenserver.m_socket, _queueSize);
 }
 
-void MainServer::clientAddrLogger(const Socket& _client)               //ClientµØÖ·¼ÇÂ¼Æ÷
+void MainServer::clientConnectLogger(const Socket& _client)               //ClientµØÖ·¼ÇÂ¼Æ÷
 {
           std::lock_guard<std::mutex> lock(m_loggerDisplayMutex);
           std::cout << "[Client Online Alert!] : IP=" << ::inet_ntoa(_client.m_addrInfo.sin_addr)
                     << " Port = " << _client.m_addrInfo.sin_port << std::endl;
+}
+
+void  MainServer::clientDisconnectLogger(const Socket& _client)               //ClientÍË³öµÇÂ¼µØÖ·¼ÇÂ¼
+{
+          std::lock_guard<std::mutex> lock(m_loggerDisplayMutex);
+          std::cout << "[Client Disconnect Alert!] : IP=" << ::inet_ntoa(_client.m_addrInfo.sin_addr)
+                    << " Port =  " << _client.m_addrInfo.sin_port << std::endl;
 }
 
 std::vector<Socket*>::iterator MainServer::FindSocket(const SOCKET& s)
@@ -94,19 +101,17 @@ void MainServer::eventSelectCom(const Socket& _listenServer)
                     }
                     else
                     {
-                              if (eventSelect.isSelectSocketRead()) {               //ÊÇ·ñ¶ÁÈ¡ÃèÊö·ûÊÇ·ñ±ä»¯´¦ÀíÐÂ½¨Á¢µÄÁ¬½Ó
+                              if (eventSelect.isSelectSocketRead()) {               //   Ë­Á´½Ó½øÀ´¾Í·¢ËÍESTABLISHED
+                                        char szSendBuffer[1024]{ 0 };
+                                        ClientUpdatePackage* packet = reinterpret_cast<ClientUpdatePackage*>(szSendBuffer);
                                         const Socket* ConnectSocket = this->acceptClientCom(_listenServer);           //½ÓÊÕÐÂÁ¬½Ó²¢¸üÐÂ
                                         eventSelect.updateClientConn(ConnectSocket);
-                                        for (size_t i = 0; i < this->m_connClients.size(); ++i) {
+                                        const_cast<Socket*>(ConnectSocket)->PackageSend(szSendBuffer, 0, packet->getPacketLength());
+                                        for (size_t i = 0; i < this->m_connClients.size(); ++i) {                  //¸øËùÓÐÓÃ»§·¢ËÍµ±Ç°ÔÚÏßµÄËùÓÐÓÃ»§
+
                                                   char szSendBuffer[1024]{ 0 };
                                                   ClientUpdatePackage* packet = reinterpret_cast<ClientUpdatePackage*>(szSendBuffer);
-                                                  if (this->m_connClients.at(i) != ConnectSocket) {                               //²»ÓÃ½«×Ô¼º·¢¸ø×Ô¼º
-                                                           char szSendBuffer[1024]{ 0 };
-                                                            packet = new (szSendBuffer)  ClientUpdatePackage(CMD_NEWMEMBER_JOINED);
-                                                 }
-                                                  else {                                                                                                     //Á¬½Ó½¨Á¢³É¹¦µ«ÊÇÃ»ÓÐµÇÂ¼
-                                                            packet = new (szSendBuffer)  ClientUpdatePackage(CMD_ESTABLISHED);
-                                                  }
+                                                  packet = new (szSendBuffer)  ClientUpdatePackage(CMD_NEWMEMBER_JOINED);
                                                   this->m_connClients.at(i)->PackageSend(szSendBuffer, 0, packet->getPacketLength());
                                         }
                               }
@@ -117,7 +122,9 @@ void MainServer::eventSelectCom(const Socket& _listenServer)
                                                   if (clientService(*iter))                   //ÓÃ»§Ö÷¶¯¹Ø±Õlogout
                                                   {
                                                             const Socket* socket = (*iter)->getMySelf();
+                                                            clientDisconnectLogger(*socket);                                             //ÍË³öÊ±µÄ¼ÇÂ¼¹¤¾ß
                                                              eventSelect.cleanSelectSocketRead(socket);
+                                                             delete socket;               //ÊÖ¶¯¹Ø±Õ²¢ÊÍ·Åsocket
                                                             m_connClients.erase(iter);    //Íê³ÉºóÉ¾³ý
                                                             for (size_t i = 0; i < this->m_connClients.size(); ++i) {            //ÔÚ¿Í»§¶ËÍÆ³öºóÔÙ´Î¸üÐÂ
                                                                       char szSendBuffer[1024]{ 0 };
@@ -147,18 +154,21 @@ bool MainServer::clientService(Socket*& _client)                            //ºË
                     }
                     else {
                               DataPacketHeader* header(reinterpret_cast<DataPacketHeader*>(szRecvBuffer));
-                              ConnectControlPackage* body(reinterpret_cast<ConnectControlPackage*>(
-                                        reinterpret_cast<char*>(szRecvBuffer) + header->getPacketLength() - sizeof(DataPacketHeader)));
+                           /*   ConnectControlPackage* body(reinterpret_cast<ConnectControlPackage*>(
+                                        reinterpret_cast<char*>(szRecvBuffer) + header->getPacketLength() - sizeof(DataPacketHeader)));*/
+                              ConnectControlPackage* body(reinterpret_cast<ConnectControlPackage*>(reinterpret_cast<char*>(szRecvBuffer)));
                               DataTransferState* state(reinterpret_cast<DataTransferState*>(szSendBuffer));
                               _retValue = _client->PackageRecv(szRecvBuffer, sizeof(DataPacketHeader), header->getPacketLength() - sizeof(DataPacketHeader));     //Æ«ÒÆÒ»¸öÏûÏ¢Í·µÄ³¤¶È
                               if (header->getPacketCommand() == CMD_LOGIN) {              //µÇÈë×´Ì¬È·¶¨
-                                        std::cout << "ÊÕµ½ÃüÁîÐÅÏ¢ CMD_LOGIN:" << std::endl;
+                                        std::cout << std::endl << "ÊÕµ½ÃüÁîÐÅÏ¢ CMD_LOGIN:" << std::endl;
+                                        std::cout << "µÇÂ¼ID£º" << body->getUserName() << std::endl;
+                                        std::cout << "µÇÂ¼Pass£º" << body->getUserPassword() << std::endl;
                                         cleanArray<char>(szSendBuffer, sizeof(szSendBuffer) / sizeof(char));
                                         state = new (szSendBuffer)  DataTransferState(CMD_LOGIN_RESULT);
 
                               }
                               else if (header->getPacketCommand() == CMD_LOGOUT) {         //µÇ³ö×´Ì¬È·¶¨
-                                        std::cout << "ÊÕµ½ÃüÁîÐÅÏ¢ CMD_LOGOUT:" << std::endl;
+                                        std::cout << std::endl << "ÊÕµ½ÃüÁîÐÅÏ¢ CMD_LOGOUT:" << std::endl;
                                         cleanArray<char>(szSendBuffer, sizeof(szSendBuffer) / sizeof(char));
                                         state = new (szSendBuffer)  DataTransferState(CMD_LOGOUT_RESULT);
                                         _shutdownflag = true;                                                              //ÍË³öµ±Ç°socket´¦Àí

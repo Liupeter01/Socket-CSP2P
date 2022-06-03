@@ -15,7 +15,5 @@
 #include<string>
 #include<mutex>
 #include<vector>
-#include<queue>
-#include<list>
-#include<functional>
 #include<thread>
+#include<future>

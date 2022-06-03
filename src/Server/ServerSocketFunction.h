@@ -60,7 +60,8 @@ public:
 
           Socket* acceptClientCom(const Socket& _listenServer);                     //将半连接转全连接,并将连接客户端压入容器
           void eventSelectCom(const Socket& _listenServer);                                                                  //事件选择网络模型
-          void clientAddrLogger(const Socket& _client);                              //Client地址记录器
+          void clientConnectLogger(const Socket& _client);                              //Client连接建立地址记录器
+          void clientDisconnectLogger(const Socket& _client);                          //Client断开连接地址记录器
           bool clientService(Socket*& _client)      ;                                     //业务处理函数
           std::vector<Socket*>::iterator FindSocket(const SOCKET& s);                            //寻找是否存在Socket
           template<typename T>

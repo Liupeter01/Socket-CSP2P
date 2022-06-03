@@ -51,19 +51,19 @@ public:
           virtual ~MainClient();
 public:
           bool initlizeClient();                                                                              //初始化服务器
-          void sventSelectCom(Socket& _client);                                     //事件选择网络
-          bool UserService(Socket& _client);                                                       //业务处理函数
+          void sventSelectCom(Socket& _client);                                                //事件选择网络
+
+          void ClientServiceStart(Socket& _client);                                             //启动服务
+          bool UserService(Socket& _client);                                                       //服务器接收处理函数
+          void UserInput(Socket& _client);                                                          //用户输入处理线程
           template<typename T>
           static void cleanArray(T* _array, int size);      //数组清理工具
-          
-
-private:
-          timeval* m_timesetting;                                                                       //客户端超时事件
-          DataPacketHeader m_packetHeader;                                                    //用于函数绑定器                           
+      
+private:  
+          std::vector<std::thread>m_thread;                                                    //客户端的线程
+          timeval* m_timesetting;                                                                       //客户端超时事件                   
           std::mutex m_DisplayMutex;                                                               //服务端消息输出锁
           std::mutex m_dataPacketMutex;                                                          //数据报文记录器锁
-          std::list<  DataPacketHeader*> m_recivedDataPacket;               //数据报接收记录器
-          std::list<  DataPacketHeader*> m_sentDataPacket;                   //数据报发送记录器
           WSADATA _wsadata;                                                                         //wsadata
           int _retValue = 0;                                                                                  //服务器函数返回值
 };

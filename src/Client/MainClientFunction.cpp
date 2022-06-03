@@ -19,15 +19,11 @@ MainClient::~MainClient()
 #ifdef WINDOWSPLATFROM                                                                              //Windows Æ½Ì¨ÊÊÅä
           ::WSACleanup();
 #endif
-          for (auto ib = m_recivedDataPacket.begin(); ib != m_recivedDataPacket.end(); ib++) {
-                    if (*ib == nullptr) {
-                              delete* ib;
+          for (auto ib = m_thread.begin(); ib != m_thread.end(); ++ib) {                    //Ïß³ÌµÄµÈ´ı
+                    if ((*ib).joinable()) {
+                              (*ib).join();
                     }
-          }
-          for (auto ib = m_sentDataPacket.begin(); ib != m_sentDataPacket.end(); ib++) {
-                    if (*ib == nullptr) {
-                              delete* ib;
-                    }
+                    m_thread.erase(ib);
           }
 }
 
@@ -38,12 +34,19 @@ bool MainClient::initlizeClient()
 #endif
 }
 
+void MainClient::ClientServiceStart(Socket &_client)
+{
+          m_thread.emplace_back(&MainClient::sventSelectCom, this, std::ref(_client));
+          m_thread.emplace_back(&MainClient::UserInput, this, std::ref(_client));
+}
+
 void MainClient::sventSelectCom(Socket& _client)                //¿Í»§¶ËÓë·şÎñÆ÷ÊÇÒ»¶ÔÒ»µÄÁ¬½Ó
 {
           while (true)
           {
                     EventSelectStruct eventSelect(_client,*m_timesetting);
                     if (eventSelect.StartSelect() < 0) {              //¿Í»§¶Ë¼ì²âÊÇ·ñÊÕµ½·şÎñÆ÷µÄĞÂÏûÏ¢
+                              std::lock_guard<std::mutex> lock(m_DisplayMutex);
                               std::cout << "SELECT ¹¤×÷´íÎó!    " << WSAGetLastError() << std::endl;
                               break;
                     }
@@ -52,19 +55,47 @@ void MainClient::sventSelectCom(Socket& _client)                //¿Í»§¶ËÓë·şÎñÆ÷
                               if (eventSelect.isSelectSocketRead()) { //ÃèÊö·ûÊÇ·ñ±ä»¯´¦ÀíÀ´×Ô·şÎñÆ÷»òÕßÆäËû¿Í»§¶ËµÄÏûÏ¢
                                         /*´ËÊ±½¨Á¢Á¬½ÓµÄÊÇÆäËûÁ¬½ÓµÄP2P¿Í»§¶Ë*/
                                         //for(auto ib; ; ;)
-                                      
-                              }
-                              /*À´×Ô·şÎñÆ÷ÊÇ±ØĞëÒª½øĞĞ´¦ÀíµÄ*/
-                              eventSelect.cleanSelectSocketRead(_client);                 //Çå³ı´¦Àí·şÎñÆ÷×¨ÊôÁ¬½Ósocket
-                              /*ÊÇ·ñ´æÔÚÆäËûÁ¬Èë¸Ã¿Í»§¶ËµÄÆäËûÍ¨ĞÅ¿Í»§¶Ë*/
-                              //for(auto ib; ; ){}
-                              if (UserService(_client)) {
-                                        std::cout << "socket ¹Ø±Õ" << std::endl;
+                                           /*À´×Ô·şÎñÆ÷ÊÇ±ØĞëÒª½øĞĞ´¦ÀíµÄ*/
+                                        eventSelect.cleanSelectSocketRead(_client);                 //Çå³ı´¦Àí·şÎñÆ÷×¨ÊôÁ¬½Ósocket
+                                        /*ÊÇ·ñ´æÔÚÆäËûÁ¬Èë¸Ã¿Í»§¶ËµÄÆäËûÍ¨ĞÅ¿Í»§¶Ë*/
+                                        //for(auto ib; ; ){}
+                                        if (UserService(_client)) {
+
+                                                  std::lock_guard<std::mutex> lock(m_DisplayMutex);
+                                                  std::cout << "socket ¹Ø±Õ" << std::endl;
+                                                  break;
+                                        }
                               }
                     }
           }
 }
 
+
+void MainClient::UserInput(Socket& _client)                           //ÓÃ»§ÊäÈëÏß³Ì
+{
+          while (1)
+          {
+                    char szSendBuffer[4096]{ 0 };                                                                                   //·¢ËÍ»º³åÇø
+                    ConnectControlPackage* body = reinterpret_cast<ConnectControlPackage*>(reinterpret_cast<char*>(szSendBuffer));
+                    std::string inputData;
+                    {
+                              std::lock_guard<std::mutex> lock(m_DisplayMutex);
+                              std::cout << "ÊäÈëÄúµÄ²Ù×÷(login,logout):";
+                              std::cin >> inputData;
+                    }
+                   
+                    if (inputData.length() != 0 && !strcmp(inputData.c_str(), "login")) {
+                              body = new (szSendBuffer)  ConnectControlPackage(CMD_LOGIN, "ADMIN", "ADMIN");
+                    }
+                    else if (inputData.length() != 0 && !strcmp(inputData.c_str(), "logout")) {
+                              body = new (szSendBuffer)  ConnectControlPackage(CMD_LOGOUT);
+                    }
+                    else {
+                              body = new (szSendBuffer) ConnectControlPackage(DEFAULT);
+                    }
+                    _client.PackageSend(szSendBuffer, 0, body->getPacketLength());                                 //·¢ËÍÊı¾İ±¨ÎÄ·µ»Ø×´Ì¬
+          }
+}
 
 bool MainClient::UserService(Socket& _client)                            //ºËĞÄÒµÎñº¯Êı
 {
@@ -80,7 +111,6 @@ bool MainClient::UserService(Socket& _client)                            //ºËĞÄÒ
           DataTransferState* state = reinterpret_cast<DataTransferState*>(
                     reinterpret_cast<char*>(szRecvBuffer) + header->getPacketLength() - sizeof(DataPacketHeader));
 
-          ConnectControlPackage* body = reinterpret_cast<ConnectControlPackage*>(reinterpret_cast<char*>(szSendBuffer));
           if ((_retValue = _client.PackageRecv(szRecvBuffer, 0, sizeof(DataPacketHeader))) > 0) {   //½ÓÊÕheader
                     if (_retValue < sizeof(DataPacketHeader)) {                        /* ³öÏÖÉÙ°üµÄÇé¿ö*/
 
@@ -90,29 +120,35 @@ bool MainClient::UserService(Socket& _client)                            //ºËĞÄÒ
                               _retValue = _client.PackageRecv(szRecvBuffer, sizeof(DataPacketHeader), header->getPacketLength() - sizeof(DataPacketHeader));     //Æ«ÒÆÒ»¸öÏûÏ¢Í·µÄ³¤¶È
                               if (header->getPacketCommand() == CMD_LOGIN_RESULT)                             //ÓÃ»§µÇÂ¼·şÎñÆ÷³É¹¦
                               {
+                                        std::lock_guard<std::mutex> lock(m_DisplayMutex);
                                         std::cout << "ÓÃ»§µÇÂ½·şÎñÆ÷³É¹¦" << std::endl;
                               }
                               else if (header->getPacketCommand() == CMD_LOGOUT_RESULT)                  //ÓÃ»§µÇ³ö·şÎñÆ÷³É¹¦
                               {
+                                        std::lock_guard<std::mutex> lock(m_DisplayMutex);
                                         std::cout << "ÓÃ»§³É¹¦µÇ³ö·şÎñÆ÷" << std::endl;
-                                        _shutdownflag = true;
+                                        return true;
                               }
                               else if (header->getPacketCommand() == CMD_NEWMEMBER_JOINED)          //ĞÂÓÃ»§¼ÓÈë¸üĞÂclientÁĞ±í
                               {
+                                        std::lock_guard<std::mutex> lock(m_DisplayMutex);
                                         std::cout << "CMD_NEWMEMBER_JOINED" << std::endl;
                                         /*¸üĞÂÁ¬½ÓµÄP2P¿Í»§¶ËµÄÁĞ±í*/
                               }
                               else if (header->getPacketCommand() ==CMD_MEMBER_LEAVED)               //ÒÑÁ¬½ÓµÄÓÃ»§Àë¿ª
                               {
+                                        std::lock_guard<std::mutex> lock(m_DisplayMutex);
                                         std::cout << "CMD_MEMBER_LEAVED" << std::endl;
                                         /*¸üĞÂÁ¬½ÓµÄP2P¿Í»§¶ËµÄÁĞ±í*/
                               }
                               else if (header->getPacketCommand() == CMD_ESTABLISHED)               //ÒÑÁ¬½ÓµÄÓÃ»§Àë¿ª
                               {
+                                        std::lock_guard<std::mutex> lock(m_DisplayMutex);
                                         std::cout << "CMD_ESTABLISHED" << std::endl;
                                         /*¸üĞÂÁ¬½ÓµÄP2P¿Í»§¶ËµÄÁĞ±í*/
                               }
                               else {
+                                        std::lock_guard<std::mutex> lock(m_DisplayMutex);
                                         std::cout << "ÓÃ»§µÇÂ½·şÎñÆ÷´íÎó" << std::endl;
                               }
                               cleanArray<char>(szRecvBuffer, sizeof(szRecvBuffer) / sizeof(char));
@@ -122,19 +158,6 @@ bool MainClient::UserService(Socket& _client)                            //ºËĞÄÒ
                     /*·şÎñÆ÷¿ÉÄÜÔİÊ±Ã»ÓĞÊı¾İ£¬»òÕßÁ¬½ÓÒì³£*/
           }
            /*·şÎñÆ÷Ã»ÓĞÊı¾İµÄ¸üĞÂ£¬Òò´Ë¿Í»§¶ËÖ´ĞĞ×Ô¼ºµÄ²Ù×÷*/
-          std::string inputData;
-          /*¶àÏß³ÌÊäÈë´¦Àí!!!*/
-          std::cout << "ÊäÈëÄúµÄ²Ù×÷(login,logout):";
-          std::cin >> inputData;
-          if (inputData.length() != 0 && !strcmp(inputData.c_str(), "login")) {
-                    body = new (szSendBuffer)  ConnectControlPackage(CMD_LOGIN, "ADMIN", "ADMIN");
-          }
-          else if (inputData.length() != 0 && !strcmp(inputData.c_str(), "logout")) {
-                    body = new (szSendBuffer)  ConnectControlPackage(CMD_LOGOUT);
-          }
-          else {
-                    body = new (szSendBuffer) ConnectControlPackage(DEFAULT);
-          }
-          _client.PackageSend(szSendBuffer, 0, body->getPacketLength());                                 //·¢ËÍÊı¾İ±¨ÎÄ·µ»Ø×´Ì¬
+       
           return _shutdownflag;
 }

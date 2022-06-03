@@ -57,6 +57,8 @@ public:
           );
 
           virtual void* getPacketAddr();
+          const std::string& getUserName();
+          const std::string& getUserPassword();
 private:
           void setUserName(std::string&& str);
           void setUserPass(std::string&& str);

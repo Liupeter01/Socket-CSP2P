@@ -62,6 +62,16 @@ void* ConnectControlPackage::getPacketAddr()
           return this;
 }
 
+const std::string& ConnectControlPackage::getUserName()
+{
+          return userName;
+}
+
+const std::string& ConnectControlPackage::getUserPassword()
+{
+          return userPassWord;
+}
+
 void    ConnectControlPackage::setUserName(std::string&& str)
 {
           userName.erase(userName.begin(), userName.end());

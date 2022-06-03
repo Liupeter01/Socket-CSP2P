@@ -62,6 +62,16 @@ void* ConnectControlPackage::getPacketAddr()
           return this;
 }
 
+const std::string& ConnectControlPackage::getUserName()
+{
+          return userName;
+}
+
+const std::string& ConnectControlPackage::getUserPassword()
+{
+          return userPassWord;
+}
+
 void    ConnectControlPackage::setUserName(std::string&& str)
 {
           userName.erase(userName.begin(), userName.end());
@@ -78,12 +88,12 @@ ConnectControlPackage::ConnectControlPackage(int _datalength, enum  CMD _cmdComm
           DataPacketHeader(_datalength, _cmdCommand) {
 }
 
-ClientUpdatePackage::ClientUpdatePackage():DataPacketHeader()
+ClientUpdatePackage::ClientUpdatePackage() : DataPacketHeader()
 {
-          
+
 }
 
-ClientUpdatePackage::ClientUpdatePackage(enum  CMD _cmdCommand):
+ClientUpdatePackage::ClientUpdatePackage(enum  CMD _cmdCommand) :
           DataPacketHeader(sizeof(ClientUpdatePackage), _cmdCommand) {
 
 }
