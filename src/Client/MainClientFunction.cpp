@@ -45,7 +45,7 @@ void MainClient::sventSelectCom(Socket& _client)                //客户端与服务器
           while (true)
           {
                     EventSelectStruct eventSelect(_client,*m_timesetting);
-                    if (eventSelect.StartSelect() < 0) {              //客户端检测是否收到服务器的新消息
+                    if (eventSelect.StartSelect(_client) < 0) {              //客户端检测是否收到服务器的新消息
                               std::lock_guard<std::mutex> lock(m_DisplayMutex);
                               std::cout << "SELECT 工作错误!    " << WSAGetLastError() << std::endl;
                               break;

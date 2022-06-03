@@ -64,7 +64,9 @@ private:
           timeval* m_timesetting;                                                                       //客户端超时事件                   
           std::mutex m_DisplayMutex;                                                               //服务端消息输出锁
           std::mutex m_dataPacketMutex;                                                          //数据报文记录器锁
+#ifdef _WIN3264
           WSADATA _wsadata;                                                                         //wsadata
+#endif // _WIN3264
           int _retValue = 0;                                                                                  //服务器函数返回值
 };
 

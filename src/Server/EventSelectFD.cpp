@@ -20,38 +20,36 @@ EventSelectStruct::EventSelectStruct(const Socket& _socket, timeval& _timeval)
           FD_SET(m_listenServer.m_socket, &m_fdRead);
 }
 
-int EventSelectStruct::StartSelect()
+int EventSelectStruct::StartSelect(Socket& _client)
 {
           SOCKET temp;
+#ifdef _WIN3264
           int number = 0;
           for (size_t i = 0; i < getReadCount(); ++i) {
                     if (static_cast<int>(m_fdRead.fd_array[i]) > number) {
                               number = static_cast<int>(m_fdRead.fd_array[i]);
                     }
           }
-          temp = static_cast<SOCKET>(number);
-          return ::select(temp + 1, &m_fdRead, &m_fdWrite, &m_fdException, m_timeset);
+          temp = static_cast<SOCKET>(number)+1;
+#else
+          temp = _client.m_socket + 1;
+#endif
+          return ::select(temp, &m_fdRead, &m_fdWrite, &m_fdException, m_timeset);
 }
 
 int EventSelectStruct::isSelectSocketRead()                                               //判断是否设置读取描述符
 {
-#ifdef  _WIN3264
           return  ::FD_ISSET(m_listenServer.m_socket, &m_fdRead);
-#endif
 }
 
 int EventSelectStruct::isSelectSocketWrite()                                             //判断是否设置读取描述符
 {
-#ifdef  _WIN3264
           return  ::FD_ISSET(m_listenServer.m_socket, &m_fdWrite);
-#endif
 }
 
 int EventSelectStruct::isSelectSocketException()                                                //判断是否设置读取描述符
 {
-#ifdef  _WIN3264
           return  ::FD_ISSET(m_listenServer.m_socket, &m_fdException);
-#endif
 }
 void  EventSelectStruct::cleanSelectSocketRead(const Socket*& s)                      //清除Select模型的写入
 {
@@ -64,16 +62,12 @@ void  EventSelectStruct::cleanSelectSocketRead(const Socket& s)                 
 
 void EventSelectStruct::cleanSelectSocketWrite(const Socket& s)                            //清除Select模型的发送
 {
-#ifdef  _WIN3264
           FD_CLR(s.m_socket, &m_fdWrite);
-#endif
 }
 
 void EventSelectStruct::cleanSelectSocketException(const Socket& s)              //清除Select模型的异常
 {
-#ifdef  _WIN3264
           FD_CLR(s.m_socket, &m_fdException);
-#endif
 }
 
 
@@ -95,17 +89,47 @@ void EventSelectStruct::updateClientConn(const Socket*& s)
 
 size_t  EventSelectStruct::getReadCount()                                                           //读取的Select数据个数
 {
+#ifdef _WIN3264
           return m_fdRead.fd_count;
+#else
+          int _readCount(0);
+          for (auto i : m_fdRead.fds_bits) {
+                    if (!(*i)) {                  //当前位不为0
+                              _readCount++;
+                    }
+          }
+          return _readCount;
+#endif // __WIN3264
 }
 
 size_t  EventSelectStruct::getWriteCount()                                                            //写入的Select数据个数
 {
+#ifdef _WIN3264
           return m_fdWrite.fd_count;
+#else
+          int _writeCount(0);
+          for (auto i : m_fdWrite.fds_bits) {
+                    if (!(*i)) {                  //当前位不为0
+                              _writeCount++;
+                    }
+          }
+          return _writeCount;
+#endif // __WIN3264
 }
 
 size_t  EventSelectStruct::getExceptionCount()                                                            //异常的Select数据个数
 {
+#ifdef _WIN3264
           return m_fdException.fd_count;
+#else
+          int _exceptionCount(0);
+          for (auto i : m_fdException.fds_bits) {
+                    if (!(*i)) {                  //当前位不为0
+                              _exceptionCount++;
+                    }
+          }
+          return _exceptionCount;
+#endif // __WIN3264
 }
 
 std::vector<Socket*>::iterator EventSelectStruct::getReadSocket( std::vector<Socket*>& vec, int pos)

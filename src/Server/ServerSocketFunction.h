@@ -72,7 +72,9 @@ private:
           std::mutex m_loggerDisplayMutex;                                                    //服务端消息输出锁
           std::mutex m_dataPacketMutex;                                                          //数据报文记录器锁
           std::vector< Socket*> m_connClients;                //客户端连接记录器
+#ifdef _WIN3264
           WSADATA _wsadata;                                                                         //wsadata
+#endif // _WIN3264
           int _retValue = 0;                                                                                  //服务器函数返回值
 };
 
@@ -82,7 +84,7 @@ public:
           EventSelectStruct(const Socket& _socket, timeval& _timeval);
           virtual ~EventSelectStruct();
 public:
-          int StartSelect();
+          int StartSelect(Socket& _client);
           int isSelectSocketRead();                                                 //判断是否设置读取描述符
           int isSelectSocketWrite();                                                 //判断是否设置读取描述符
           int isSelectSocketException();                                                 //判断是否设置读取描述符

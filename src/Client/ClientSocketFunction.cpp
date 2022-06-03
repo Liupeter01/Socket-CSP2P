@@ -46,7 +46,11 @@ bool  Socket::socketClose() {
                     if (this->m_socket == INVALID_SOCKET) {
                               throw SocketCloseFailed();
                     }
-                    closesocket(this->m_socket);
+#ifdef _WIN3264
+                    closesocket(this->m_socket);            //Windows专属API
+#else
+                    ::close(this->m_socket);                  //UNIX/LINUX
+#endif // _WIN3264
                     this->m_socket = INVALID_SOCKET;
           }
           catch (const SocketCloseFailed&) {
@@ -86,7 +90,11 @@ SOCKET Socket::createTCPSocket()
 SOCKADDR_IN&& Socket::createAddrDef(unsigned long _ipaddr, unsigned short _port)      //创建地址描述结构
 {
           SOCKADDR_IN _temp{ 0 };
-          _temp.sin_addr.S_un.S_addr = _ipaddr;     //ip任意
+#ifdef _WIN3264
+          _temp.sin_addr.S_un.S_addr = _ipaddr;     //Windows中struct in_addr
+#else
+          _temp.sin_addr.s_addr = _ipaddr;     //LINUX中struct in_addr
+#endif // _WIN3264
           _temp.sin_family = AF_INET;
           _temp.sin_port = ::htons(_port);
           return std::move(_temp);

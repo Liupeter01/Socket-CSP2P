@@ -9,6 +9,7 @@
 #include<unistd.h>
 #include<arpa/inet.h>
 #include<sys/socket.h>
+using SOCKADDR_IN = sockaddr_in;
 #define SOCKET int
 #define INVALID_SOCKET (SOCKET)(~0)
 #define SOCKET_ERROR (-1)
