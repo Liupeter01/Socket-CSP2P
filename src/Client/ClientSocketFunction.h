@@ -41,7 +41,11 @@ private:
 private:
           SOCKET m_socket = INVALID_SOCKET;
           SOCKADDR_IN m_addrInfo = { 0 };
+#ifdef _WIN3264
           int m_socketSizeInfo = sizeof(SOCKADDR_IN);
+#else
+          socklen_t m_socketSizeInfo = sizeof(SOCKADDR_IN);
+#endif // _WIN3264
           bool m_socketStatus = false;                                                                                            //SOCKET◊¥Ã¨¡¨Ω”
 };
 
@@ -76,7 +80,7 @@ public:
           EventSelectStruct(const Socket& _socket, timeval& _timeval);
           virtual ~EventSelectStruct();
 public:
-          int StartSelect();
+          int StartSelect(Socket& _client); 
           int isSelectSocketRead();                                                 //≈–∂œ «∑Ò…Ë÷√∂¡»°√Ë ˆ∑˚
           int isSelectSocketWrite();                                                 //≈–∂œ «∑Ò…Ë÷√∂¡»°√Ë ˆ∑˚
           int isSelectSocketException();                                                 //≈–∂œ «∑Ò…Ë÷√∂¡»°√Ë ˆ∑˚

@@ -46,7 +46,11 @@ private:
 private:
           SOCKET m_socket = INVALID_SOCKET;
           SOCKADDR_IN m_addrInfo = { 0 };
+#ifdef _WIN3264
           int m_socketSizeInfo = sizeof(SOCKADDR_IN);
+#else
+          socklen_t m_socketSizeInfo = sizeof(SOCKADDR_IN);
+#endif // _WIN3264
           bool m_socketStatus = false;         //SOCKETÁ¬½Ó
 };
 

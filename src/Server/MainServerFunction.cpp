@@ -39,7 +39,9 @@ MainServer::MainServer(timeval &t):
           m_timesetting(new timeval(t))
 {
           this->_retValue = 0;
+#ifdef _WIN3264
           this->_wsadata = { 0 };
+#endif // _WIN3264
 }
 
 MainServer::~MainServer()
@@ -96,8 +98,8 @@ void MainServer::eventSelectCom(const Socket& _listenServer)
                     /*在此处加入Select socket网络模型结构*/
                     EventSelectStruct eventSelect(_listenServer, *m_timesetting);
                     eventSelect.updateClientConn(this->m_connClients);                                                    //将之前保存的客户端继续更新到文件描述符fd_set的信息
-                    if (eventSelect.StartSelect() < 0) {                                                                                        //出现错误
-                              std::cout << "SELECT 工作错误!    " << WSAGetLastError() << std::endl;
+                    if (eventSelect.StartSelect(const_cast<Socket&>(_listenServer)) < 0) {                                                                                        //出现错误
+                              std::cout << "SELECT 工作错误!    " << std::endl;
                     }
                     else
                     {

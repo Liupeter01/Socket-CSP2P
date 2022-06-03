@@ -20,17 +20,21 @@ EventSelectStruct::EventSelectStruct(const Socket& _socket, timeval& _timeval)
           FD_SET(m_listenServer.m_socket, &m_fdRead);
 }
 
-int EventSelectStruct::StartSelect()
+int EventSelectStruct::StartSelect(Socket& _client)
 {
           SOCKET temp;
+#ifdef _WIN3264
           int number = 0;
           for (size_t i = 0; i < getReadCount(); ++i) {
                     if (static_cast<int>(m_fdRead.fd_array[i]) > number) {
                               number = static_cast<int>(m_fdRead.fd_array[i]);
                     }
           }
-          temp = static_cast<SOCKET>(number);
-          return ::select(temp + 1, &m_fdRead, &m_fdWrite, &m_fdException, m_timeset);
+          temp = static_cast<SOCKET>(number) + 1;
+#else
+          temp = _client.m_socket + 1;
+#endif
+          return ::select(temp, &m_fdRead, &m_fdWrite, &m_fdException, m_timeset);
 }
 
 int EventSelectStruct::isSelectSocketRead()                                               //≈–∂œ «∑Ò…Ë÷√∂¡»°√Ë ˆ∑˚
