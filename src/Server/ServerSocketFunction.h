@@ -16,6 +16,12 @@ public:
 class MainServer;
 class EventSelectStruct;
 
+#ifndef _WIN3264     //Linux平台专属fd_set结构体
+class _fd_set;
+};
+#endif // _WIN3264     //Linux平台专属fd_set结构体
+
+
 class Socket {
 public:
           Socket();
@@ -28,18 +34,18 @@ public:
           SOCKET getSocket(); 
           int PackageRecv(char* lppackage, int offset, int Length);
           int PackageSend(const char* lppackage, int offset, int Length);
-          Socket* getMySelf() {
-                    return this;
-          }
+          Socket* getMySelf();
 
           /*Client Only*/
           int socketConnectServer();                                                                                                //socket连接服务器
-
           /*Server Only*/
           int socketAddrBind();                                                                                                      //Socket地址绑定工具仅限服务器
 private:
           friend MainServer;
           friend EventSelectStruct;
+#ifndef _WIN3264     //Linux平台专属fd_set结构体
+          friend _fd_set;
+#endif // _WIN3264     //Linux平台专属fd_set结构体
 
           static SOCKET createTCPSocket();               //创建TCP socket
           SOCKADDR_IN&& createAddrDef(unsigned long _ipaddr, unsigned short _port);     //创建地址描述结构
@@ -82,6 +88,23 @@ private:
           int _retValue = 0;                                                                                  //服务器函数返回值
 };
 
+#ifndef _WIN3264     //Linux平台专属fd_set结构体
+class _fd_set {
+public:
+          _fd_set();
+          virtual ~_fd_set();
+          void _FD_ZERO();
+          void _FD_SET(Socket& socket);
+          void _FD_CLR(Socket& socket);
+          int _FD_ISSET(Socket& socket);
+          int getFdSetSize();
+          bool getFdStatus(Socket& socket);
+private:
+          fd_set m_fd_set;
+          int m_sizeCount;
+};
+#endif // _WIN3264     //Linux平台专属fd_set结构体
+
 class EventSelectStruct{
 public:
           EventSelectStruct(const Socket& _socket);
@@ -107,8 +130,14 @@ public:
           std::vector<Socket*>::iterator getReadSocket(std::vector<Socket*>& vec, int pos);                 //根据socket的下标位置查询
 public:
           const Socket& m_listenServer;
+#ifdef _WIN3264
           fd_set m_fdRead;                                                    //监视文件描述符的可读(接收)集合
           fd_set m_fdWrite;                                                   //监视文件描述符的可写(发送)集合
           fd_set m_fdException;                                            //缺省
+#else
+          _fd_set m_fdRead;                                                    //监视文件描述符的可读(接收)集合
+          _fd_set m_fdWrite;                                                   //监视文件描述符的可写(发送)集合
+          _fd_set m_fdException;                                            //缺省
+#endif // _WIN3264
           timeval* m_timeset;
 };

@@ -74,13 +74,30 @@ private:
           int _retValue = 0;                                                                                  //服务器函数返回值
 };
 
+#ifndef _WIN3264     //Linux平台专属fd_set结构体
+class _fd_set {
+public:
+          _fd_set();
+          virtual ~_fd_set();
+          void _FD_ZERO();
+          void _FD_SET(Socket& socket);
+          void _FD_CLR(Socket& socket);
+          int _FD_ISSET(Socket& socket);
+          int getFdSetSize();
+          bool getFdStatus(Socket& socket);
+private:
+          fd_set m_fd_set;
+          int m_sizeCount;
+};
+#endif // _WIN3264     //Linux平台专属fd_set结构体
+
 class EventSelectStruct {
 public:
           EventSelectStruct(const Socket& _socket);
           EventSelectStruct(const Socket& _socket, timeval& _timeval);
           virtual ~EventSelectStruct();
 public:
-          int StartSelect(Socket& _client); 
+          int StartSelect(Socket& _client);
           int isSelectSocketRead();                                                 //判断是否设置读取描述符
           int isSelectSocketWrite();                                                 //判断是否设置读取描述符
           int isSelectSocketException();                                                 //判断是否设置读取描述符
@@ -99,8 +116,14 @@ public:
           std::vector<Socket*>::iterator getReadSocket(std::vector<Socket*>& vec, int pos);                 //根据socket的下标位置查询
 public:
           const Socket& m_listenServer;
+#ifdef _WIN3264
           fd_set m_fdRead;                                                    //监视文件描述符的可读(接收)集合
           fd_set m_fdWrite;                                                   //监视文件描述符的可写(发送)集合
           fd_set m_fdException;                                            //缺省
+#else
+          _fd_set m_fdRead;                                                    //监视文件描述符的可读(接收)集合
+          _fd_set m_fdWrite;                                                   //监视文件描述符的可写(发送)集合
+          _fd_set m_fdException;                                            //缺省
+#endif // _WIN3264
           timeval* m_timeset;
 };

@@ -108,3 +108,7 @@ int Socket::PackageSend(const char* lppackage, int offset, int Length)
 #endif
 }
 
+Socket* Socket::getMySelf() {
+          return this;
+}
+
