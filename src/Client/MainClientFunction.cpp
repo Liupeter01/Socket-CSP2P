@@ -11,7 +11,9 @@ MainClient::MainClient(timeval& t):
           m_timesetting(new timeval(t))
 {
           this->_retValue = 0;
+#ifdef  _WIN3264       
           this->_wsadata = { 0 };
+#endif
 }
 
 MainClient::~MainClient()
@@ -77,13 +79,10 @@ void MainClient::UserInput(Socket& _client)                           //ÓÃ»§ÊäÈë
           {
                     char szSendBuffer[4096]{ 0 };                                                                                   //·¢ËÍ»º³åÇø
                     ConnectControlPackage* body = reinterpret_cast<ConnectControlPackage*>(reinterpret_cast<char*>(szSendBuffer));
+                    /*´Ë´¦ÐèÒªÊ¹ÓÃÌõ¼þ±äÁ¿*/
                     std::string inputData;
-                    {
-                              std::lock_guard<std::mutex> lock(m_DisplayMutex);
-                              std::cout << "ÊäÈëÄúµÄ²Ù×÷(login,logout):";
-                              std::cin >> inputData;
-                    }
-                   
+                    std::cout << "ÊäÈëÄúµÄ²Ù×÷(login,logout):";
+                    std::cin >> inputData;
                     if (inputData.length() != 0 && !strcmp(inputData.c_str(), "login")) {
                               body = new (szSendBuffer)  ConnectControlPackage(CMD::CMD_LOGIN, "ADMIN", "ADMIN");
                     }
@@ -120,36 +119,42 @@ bool MainClient::UserService(Socket& _client)                            //ºËÐÄÒ
                               _retValue = _client.PackageRecv(szRecvBuffer, sizeof(DataPacketHeader), header->getPacketLength() - sizeof(DataPacketHeader));     //Æ«ÒÆÒ»¸öÏûÏ¢Í·µÄ³¤¶È
                               if (header->getPacketCommand() == CMD::CMD_LOGIN_RESULT)                             //ÓÃ»§µÇÂ¼·þÎñÆ÷³É¹¦
                               {
-                                        std::lock_guard<std::mutex> lock(m_DisplayMutex);
+                                        m_DisplayMutex.lock();
                                         std::cout << "ÓÃ»§µÇÂ½·þÎñÆ÷³É¹¦" << std::endl;
+                                        m_DisplayMutex.unlock();
                               }
                               else if (header->getPacketCommand() == CMD::CMD_LOGOUT_RESULT)                  //ÓÃ»§µÇ³ö·þÎñÆ÷³É¹¦
                               {
-                                        std::lock_guard<std::mutex> lock(m_DisplayMutex);
+                                        m_DisplayMutex.lock();
                                         std::cout << "ÓÃ»§³É¹¦µÇ³ö·þÎñÆ÷" << std::endl;
+                                        m_DisplayMutex.unlock();
                                         return true;
                               }
                               else if (header->getPacketCommand() == CMD::CMD_NEWMEMBER_JOINED)          //ÐÂÓÃ»§¼ÓÈë¸üÐÂclientÁÐ±í
                               {
-                                        std::lock_guard<std::mutex> lock(m_DisplayMutex);
+                                        m_DisplayMutex.lock();
                                         std::cout << "CMD_NEWMEMBER_JOINED" << std::endl;
+                                        m_DisplayMutex.unlock();
                                         /*¸üÐÂÁ¬½ÓµÄP2P¿Í»§¶ËµÄÁÐ±í*/
                               }
                               else if (header->getPacketCommand() == CMD::CMD_MEMBER_LEAVED)               //ÒÑÁ¬½ÓµÄÓÃ»§Àë¿ª
                               {
-                                        std::lock_guard<std::mutex> lock(m_DisplayMutex);
+                                        m_DisplayMutex.lock();
                                         std::cout << "CMD_MEMBER_LEAVED" << std::endl;
+                                        m_DisplayMutex.unlock();
                                         /*¸üÐÂÁ¬½ÓµÄP2P¿Í»§¶ËµÄÁÐ±í*/
                               }
                               else if (header->getPacketCommand() == CMD::CMD_ESTABLISHED)               //ÒÑÁ¬½ÓµÄÓÃ»§Àë¿ª
                               {
-                                        std::lock_guard<std::mutex> lock(m_DisplayMutex);
+                                        m_DisplayMutex.lock();
                                         std::cout << "CMD_ESTABLISHED" << std::endl;
+                                        m_DisplayMutex.unlock();
                                         /*¸üÐÂÁ¬½ÓµÄP2P¿Í»§¶ËµÄÁÐ±í*/
                               }
                               else {
-                                        std::lock_guard<std::mutex> lock(m_DisplayMutex);
+                                        m_DisplayMutex.lock();
                                         std::cout << "ÓÃ»§µÇÂ½·þÎñÆ÷´íÎó" << std::endl;
+                                        m_DisplayMutex.unlock();
                               }
                               cleanArray<char>(szRecvBuffer, sizeof(szRecvBuffer) / sizeof(char));
                     }

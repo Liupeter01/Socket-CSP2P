@@ -24,7 +24,6 @@ Socket* MainServer::acceptClientCom(const Socket& _listenServer)
                     clientConnectLogger(*socketTemp);                                                                     //进行服务端连接的客户端的地址显示
                     socketTemp->m_socketStatus = true;
                     m_connClients.push_back(socketTemp);                                                          //将客户端Socket压入容器
-                    socketTemp->m_socketStatus = true;
           }
           catch (const  ClientConnectFailed&) {
                     socketTemp->m_socketStatus = false;
