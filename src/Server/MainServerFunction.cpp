@@ -27,8 +27,8 @@ Socket* MainServer::acceptClientCom(const Socket& _listenServer)
           }
           catch (const  ClientConnectFailed&) {
                     socketTemp->m_socketStatus = false;
-                    #ifdef  _DEBUG
-                    std::cout << "[DEBUG INFO] : CLIENT CONNECT ERROR! \n" << WSAGetLastError() << std::endl;
+          #ifdef  _DEBUG
+                    std::cout << "[DEBUG INFO] : CLIENT CONNECT ERROR! \n" << std::endl;
           #endif 
           }
           return socketTemp;

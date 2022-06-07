@@ -18,6 +18,7 @@ using SOCKADDR_IN = sockaddr_in;
 #define PORT 8833
 
 #include<iostream>
+#include<cstring>
 #include<string>
 #include<mutex>
 #include<vector>

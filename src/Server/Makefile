@@ -2,7 +2,7 @@ TARGET:=Server
 SRC:=$(wildcard *.cpp)
 OBJS:=$(patsubst %.cpp,%.o,$(SRC))
 CXXFLAGS:= -Wall -g -Wreorder
-LIBS:=-lthread
+LIBS:=-lpthread
 
 $(TARGET):$(OBJS)
 	$(CXX) $^ -o $@ $(CXXFLAGS) $(LIBS)

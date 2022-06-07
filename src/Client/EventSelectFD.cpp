@@ -35,7 +35,7 @@ int _fd_set::getFdSetSize() {
 }
 
 bool _fd_set::getFdStatus(Socket& socket) {
-          return static_cast<bool>(this->getFdStructPtr()[static_cast<size_t>(socket.m_socket) - 1]);
+          return static_cast<bool>(this->getFdArray()[static_cast<size_t>(socket.m_socket) - 1]);
 }
 
 fd_mask* _fd_set::getFdArray()
@@ -43,7 +43,7 @@ fd_mask* _fd_set::getFdArray()
           return this->m_fd_set.fds_bits;
 }
 
-fd_set*  _fd_set::getFdStructPtr()
+fd_set* _fd_set::getFdStructPtr()
 {
           return &this->m_fd_set;
 }
@@ -91,12 +91,12 @@ int EventSelectStruct::StartSelect(Socket& _client)
                               _socketNumber = static_cast<int>(m_fdRead.fd_array[i]);
                     }
           }
-          temp = static_cast<SOCKET>(_socketNumber) + 1;       
+          temp = static_cast<SOCKET>(_socketNumber) + 1;
 #else
           _socketFdArraySize = FD_SETSIZE;                                       //FD数组最大大小(全平台通用)
           for (size_t i = 0; i < _socketFdArraySize; ++i) {
-                    if (!static_cast<int>(m_fdRead.getFdArray[i])) {                         //如果非0则代表当前单元i存在FD句柄i+1
-                              _socketNumber = i;     
+                    if (!static_cast<int>(m_fdRead.getFdArray()[i])) {                         //如果非0则代表当前单元i存在FD句柄i+1
+                              _socketNumber = i;
                     }
           }
           temp = static_cast<SOCKET>(_socketNumber) + 2;                                  //FD句柄对应关系本身需要+1，其次保存句柄最大值再次+1
@@ -105,7 +105,7 @@ int EventSelectStruct::StartSelect(Socket& _client)
 #ifdef _WIN3264                         //WINDOWS计算模式
           return ::select(temp, &m_fdRead, &m_fdWrite, &m_fdException, m_timeset);
 #else
-          return ::select(temp, m_fdRead.getFdStructPtr(), m_fdWrite。getFdStructPtr(), m_fdException.getFdStructPtr(), m_timeset);
+          return ::select(temp, m_fdRead.getFdStructPtr(), m_fdWrite.getFdStructPtr(), m_fdException.getFdStructPtr(), m_timeset);
 #endif
 }
 

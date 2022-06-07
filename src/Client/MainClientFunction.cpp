@@ -34,6 +34,7 @@ bool MainClient::initlizeClient()
 #ifdef  _WIN3264                                                                            //Windows 平台适配
           return WSAStartup(MAKEWORD(2, 2), &this->_wsadata);
 #endif
+          return true;
 }
 
 void MainClient::ClientServiceStart(Socket &_client)
@@ -49,7 +50,10 @@ void MainClient::sventSelectCom(Socket& _client)                //客户端与服务器
                     EventSelectStruct eventSelect(_client,*m_timesetting);
                     if (eventSelect.StartSelect(_client) < 0) {              //客户端检测是否收到服务器的新消息
                               std::lock_guard<std::mutex> lock(m_DisplayMutex);
-                              std::cout << "SELECT 工作错误!    " << WSAGetLastError() << std::endl;
+                              std::cout << "SELECT 工作错误!    ";
+#ifdef _WIN3264
+                              std::cout << WSAGetLastError() << std::endl;
+#endif
                               break;
                     }
                     else
