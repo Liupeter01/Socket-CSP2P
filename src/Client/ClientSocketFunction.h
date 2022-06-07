@@ -10,7 +10,13 @@ public:
 
 /*declare zone*/
 class MainClient;
+#ifndef _WIN3264     //Linux平台专属fd_set结构体
+class _fd_set;
+};
+#endif // _WIN3264     //Linux平台专属fd_set结构体
+
 class EventSelectStruct;
+
 
 class Socket {
 public:
@@ -33,9 +39,14 @@ public:
 
           /*Server Only*/
           int socketAddrBind();                                                                                                      //Socket地址绑定工具仅限服务器
+
 private:
           friend MainClient;
+#ifndef _WIN3264
+          friend _fd_set;                                                                                                                      //Linux平台下使用
+#endif
           friend EventSelectStruct;                                                                                                     //事件选择模型
+
           static SOCKET createTCPSocket();                                                                                    //创建TCP socket
           SOCKADDR_IN&& createAddrDef(unsigned long _ipaddr, unsigned short _port);     //创建地址描述结构
 private:

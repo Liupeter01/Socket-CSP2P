@@ -1,7 +1,7 @@
 #include"ServerSocketFunction.h"
 
 #ifndef _WIN3264     //Linux平台专属fd_set结构体
-_fd_set::_fd_set() :m_sizeCount(0){
+_fd_set::_fd_set() :m_sizeCount(0) {
           _FD_ZERO();
 }
 _fd_set::~_fd_set() {
@@ -9,7 +9,7 @@ _fd_set::~_fd_set() {
           _FD_ZERO();
 }
 void _fd_set::_FD_ZERO() {
-          ::FD_SET(&m_fd_set.fds_bits);
+          ::FD_ZERO(&m_fd_set.fds_bits);
           m_sizeCount = 0;
 }
 void _fd_set::_FD_SET(Socket& socket) {
@@ -32,7 +32,7 @@ bool _fd_set::getFdStatus(Socket& socket) {
 }
 #endif // _WIN3264     //Linux平台专属fd_set结构体
 
-EventSelectStruct::EventSelectStruct(const Socket& _socket) 
+EventSelectStruct::EventSelectStruct(const Socket& _socket)
           :m_listenServer(_socket),
           m_timeset(NULL)
 {
@@ -49,7 +49,7 @@ EventSelectStruct::EventSelectStruct(const Socket& _socket)
 
 EventSelectStruct::EventSelectStruct(const Socket& _socket, timeval& _timeval)
           :m_listenServer(_socket),
-          m_timeset(new timeval (_timeval))    
+          m_timeset(new timeval(_timeval))
 {
 #ifdef _WIN3264
           FD_ZERO(&m_fdRead);                        //清空fd_set结构中的数量
@@ -71,7 +71,7 @@ int EventSelectStruct::StartSelect(Socket& _client)
                               number = static_cast<int>(m_fdRead.fd_array[i]);
                     }
           }
-          temp = static_cast<SOCKET>(number)+1;
+          temp = static_cast<SOCKET>(number) + 1;
 #else
           temp = _client.m_socket + 1;  //Linux计算方式
 #endif
@@ -117,7 +117,7 @@ void  EventSelectStruct::cleanSelectSocketRead(const Socket& s)                 
 #ifdef _WIN3264                         //WINDOWS计算模式
           FD_CLR(s.m_socket, &m_fdRead);
 #else
-         m_fdRead._FD_CLR(s);
+          m_fdRead._FD_CLR(s);
 #endif
 }
 
@@ -126,7 +126,7 @@ void EventSelectStruct::cleanSelectSocketWrite(const Socket& s)                 
 #ifdef _WIN3264                         //WINDOWS计算模式
           FD_CLR(s.m_socket, &m_fdWrite);
 #else
-         m_fdWrite._FD_CLR(s);
+          m_fdWrite._FD_CLR(s);
 #endif
 }
 
@@ -194,7 +194,7 @@ size_t  EventSelectStruct::getExceptionCount()                                  
 #endif // __WIN3264
 }
 
-std::vector<Socket*>::iterator EventSelectStruct::getReadSocket( std::vector<Socket*>& vec, int pos)
+std::vector<Socket*>::iterator EventSelectStruct::getReadSocket(std::vector<Socket*>& vec, int pos)
 {
           for (auto ib = vec.begin(); ib != vec.end(); ib++) {
 #ifdef _WIN3264
@@ -210,7 +210,7 @@ std::vector<Socket*>::iterator EventSelectStruct::getReadSocket( std::vector<Soc
           return vec.end();             //没有找到
 }
 
-EventSelectStruct::~EventSelectStruct() 
+EventSelectStruct::~EventSelectStruct()
 {
           delete m_timeset;
 }

@@ -9,7 +9,7 @@ _fd_set::~_fd_set() {
           _FD_ZERO();
 }
 void _fd_set::_FD_ZERO() {
-          ::FD_SET(&m_fd_set.fds_bits);
+          ::FD_ZERO(&m_fd_set.fds_bits);
           m_sizeCount = 0;
 }
 void _fd_set::_FD_SET(Socket& socket) {
