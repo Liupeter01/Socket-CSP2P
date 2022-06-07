@@ -18,7 +18,6 @@ class EventSelectStruct;
 
 #ifndef _WIN3264     //Linux平台专属fd_set结构体
 class _fd_set;
-};
 #endif // _WIN3264     //Linux平台专属fd_set结构体
 
 
@@ -99,6 +98,7 @@ public:
           int _FD_ISSET(Socket& socket);
           int getFdSetSize();
           bool getFdStatus(Socket& socket);
+          fd_mask* getFdArray();
 private:
           fd_set m_fd_set;
           int m_sizeCount;

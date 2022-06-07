@@ -9,27 +9,32 @@ _fd_set::~_fd_set() {
           _FD_ZERO();
 }
 void _fd_set::_FD_ZERO() {
-          ::FD_ZERO(&m_fd_set.fds_bits);
+          ::FD_ZERO(m_fd_set.fds_bits);
           m_sizeCount = 0;
 }
 void _fd_set::_FD_SET(Socket& socket) {
-          ::FD_SET(socket.m_socket, &m_fd_set.fds_bits);
+          ::FD_SET(socket.m_socket, m_fd_set.fds_bits);
           m_sizeCount++;
 }
 void _fd_set::_FD_CLR(Socket& socket) {
-          ::FD_CLR(socket.m_socket, &m_fd_set.fds_bits);
+          ::FD_CLR(socket.m_socket, m_fd_set.fds_bits);
           m_sizeCount--;
 }
 int _fd_set::_FD_ISSET(Socket& socket)
 {
-          return ::FD_ISSET(socket.m_socket, &m_fd_set.fds_bits);
+          return ::FD_ISSET(socket.m_socket, m_fd_set.fds_bits);
 }
 int _fd_set::getFdSetSize() {
           return m_sizeCount;
 }
 bool _fd_set::getFdStatus(Socket& socket) {
-          return static_cast<bool>(m_fd_set.fds_bits[static_cast<int>(socket.m_socket) - 1]);
+          return static_cast<bool>(m_fd_set.fds_bits[static_cast<size_t>(socket.m_socket) - 1]);
 }
+fd_mask* _fd_set::getFdArray()
+{
+          return m_fd_set.fds_bits;
+}
+
 #endif // _WIN3264     //Linux平台专属fd_set结构体
 
 EventSelectStruct::EventSelectStruct(const Socket& _socket)
@@ -42,7 +47,7 @@ EventSelectStruct::EventSelectStruct(const Socket& _socket)
           FD_ZERO(&m_fdException);                //清空fd_set结构中的数量
           FD_SET(m_listenServer.m_socket, &m_fdRead);
 #else
-          m_fdRead._FD_SET(m_listenServer.m_socket);
+          m_fdRead._FD_SET(const_cast<Socket&>(m_listenServer), m_fdRead.getFdArray());
 #endif // _WIN3264
 
 }
@@ -57,25 +62,38 @@ EventSelectStruct::EventSelectStruct(const Socket& _socket, timeval& _timeval)
           FD_ZERO(&m_fdException);                //清空fd_set结构中的数量
           FD_SET(m_listenServer.m_socket, &m_fdRead);
 #else
-          m_fdRead._FD_SET(m_listenServer.m_socket);
+          m_fdRead._FD_SET(const_cast<Socket&>(m_listenServer), m_fdRead.getFdArray());
 #endif // _WIN3264
 }
 
 int EventSelectStruct::StartSelect(Socket& _client)
 {
-          SOCKET temp;
+          SOCKET temp = INVALID_SOCKET;                                      //最大临时Socket FD
+          size_t _socketNumber(0), _socketFdArraySize(0);                      //
+
 #ifdef _WIN3264                         //WINDOWS计算模式
-          int number = 0;
-          for (size_t i = 0; i < getReadCount(); ++i) {
-                    if (static_cast<int>(m_fdRead.fd_array[i]) > number) {
-                              number = static_cast<int>(m_fdRead.fd_array[i]);
+          _socketFdArraySize = this->getReadCount();                              //得到读取select种的FD数量
+          for (size_t i = 0; i < _socketFdArraySize; ++i) {
+                    if (static_cast<int>(m_fdRead.fd_array[i]) > _socketNumber) {
+                              _socketNumber = static_cast<int>(m_fdRead.fd_array[i]);
                     }
           }
-          temp = static_cast<SOCKET>(number) + 1;
+          temp = static_cast<SOCKET>(_socketNumber) + 1;       
 #else
-          temp = _client.m_socket + 1;  //Linux计算方式
+          _socketFdArraySize = FD_SETSIZE;                                       //FD数组最大大小(全平台通用)
+          for (size_t i = 0; i < _socketFdArraySize; ++i) {
+                    if (!static_cast<int>(m_fdRead.m_fd_set.fds_bits[i])) {                         //如果非0则代表当前单元i存在FD句柄i+1
+                              _socketNumber = i;     
+                    }
+          }
+          temp = static_cast<SOCKET>(_socketNumber) + 2;                                  //FD句柄对应关系本身需要+1，其次保存句柄最大值再次+1
 #endif
+
+#ifdef _WIN3264                         //WINDOWS计算模式
           return ::select(temp, &m_fdRead, &m_fdWrite, &m_fdException, m_timeset);
+#else
+          return ::select(temp, m_fdRead.getFdArray(), m_fdWrite.getFdArray(), m_fdException.getFdArray(), m_timeset);
+#endif
 }
 
 int EventSelectStruct::isSelectSocketRead()                                               //判断是否设置读取描述符
@@ -83,7 +101,7 @@ int EventSelectStruct::isSelectSocketRead()                                     
 #ifdef _WIN3264                         //WINDOWS计算模式
           return  ::FD_ISSET(m_listenServer.m_socket, &m_fdRead);
 #else
-          return m_fdRead._FD_ISSET(m_listenServer);
+          return m_fdRead._FD_ISSET(const_cast<Socket&>(m_listenServer));
 #endif
 }
 
@@ -92,7 +110,7 @@ int EventSelectStruct::isSelectSocketWrite()                                    
 #ifdef _WIN3264                         //WINDOWS计算模式
           return  ::FD_ISSET(m_listenServer.m_socket, &m_fdWrite);
 #else
-          return m_fdWrite._FD_ISSET(m_listenServer);
+          return m_fdWrite._FD_ISSET(const_cast<Socket&>(m_listenServer));
 #endif
 }
 
@@ -101,7 +119,7 @@ int EventSelectStruct::isSelectSocketException()                                
 #ifdef _WIN3264                         //WINDOWS计算模式
           return  ::FD_ISSET(m_listenServer.m_socket, &m_fdException);
 #else
-          return m_fdException._FD_ISSET(m_listenServer);
+          return m_fdException._FD_ISSET(const_cast<Socket&>(m_listenServer));
 #endif
 }
 void  EventSelectStruct::cleanSelectSocketRead(const Socket*& s)                      //清除Select模型的写入
@@ -109,7 +127,7 @@ void  EventSelectStruct::cleanSelectSocketRead(const Socket*& s)                
 #ifdef _WIN3264                         //WINDOWS计算模式
           FD_CLR(s->m_socket, &m_fdRead);
 #else
-          m_fdRead._FD_CLR(*s);
+          m_fdRead._FD_CLR(const_cast<Socket&>(*s));
 #endif
 }
 void  EventSelectStruct::cleanSelectSocketRead(const Socket& s)                      //清除Select模型的写入
@@ -117,7 +135,7 @@ void  EventSelectStruct::cleanSelectSocketRead(const Socket& s)                 
 #ifdef _WIN3264                         //WINDOWS计算模式
           FD_CLR(s.m_socket, &m_fdRead);
 #else
-          m_fdRead._FD_CLR(s);
+          m_fdRead._FD_CLR(const_cast<Socket&>(s));
 #endif
 }
 
@@ -126,7 +144,7 @@ void EventSelectStruct::cleanSelectSocketWrite(const Socket& s)                 
 #ifdef _WIN3264                         //WINDOWS计算模式
           FD_CLR(s.m_socket, &m_fdWrite);
 #else
-          m_fdWrite._FD_CLR(s);
+          m_fdWrite._FD_CLR(const_cast<Socket&>(s));
 #endif
 }
 
@@ -135,7 +153,7 @@ void EventSelectStruct::cleanSelectSocketException(const Socket& s)             
 #ifdef _WIN3264                         //WINDOWS计算模式
           FD_CLR(s.m_socket, &m_fdException);
 #else
-          m_fdException._FD_CLR(s);
+          m_fdException._FD_CLR(const_cast<Socket&>(s));
 #endif
 }
 
@@ -154,7 +172,7 @@ void EventSelectStruct::updateClientConn(const Socket& s)
 #ifdef _WIN3264                         //WINDOWS计算模式
           FD_SET(s.m_socket, &m_fdRead);
 #else
-          m_fdRead._FD_SET(s);
+          m_fdRead._FD_SET(const_cast<Socket&>(s));
 #endif
 }
 
@@ -163,7 +181,7 @@ void EventSelectStruct::updateClientConn(const Socket*& s)
 #ifdef _WIN3264                         //WINDOWS计算模式
           FD_SET(s->m_socket, &m_fdRead);
 #else
-          m_fdRead._FD_SET(*s);
+          m_fdRead._FD_SET(const_cast<Socket&>(*s));
 #endif
 }
 
