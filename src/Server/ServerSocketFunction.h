@@ -98,7 +98,8 @@ public:
           int _FD_ISSET(Socket& socket);
           int getFdSetSize();
           bool getFdStatus(Socket& socket);
-          fd_mask* getFdArray();
+          fd_mask* getFdArray();                            //获取fd_set结构体内的数组首地址
+          fd_set* getFdStructPtr();                          //获取fd_set结构体的指针
 private:
           fd_set m_fd_set;
           int m_sizeCount;
